@@ -6,10 +6,8 @@ const CITIES = ['Baghdad', 'Erbil', 'Basra', 'Mosul', 'Sulaymaniyah', 'Najaf', '
 const CATEGORIES = ['Restaurant', 'Hotel', 'Cafe', 'Pharmacy', 'Supermarket', 'Tech Company', 'Gym'];
 const SOURCES: { id: DiscoverySource; name: string }[] = [
   { id: 'gemini', name: 'Gemini Research' },
-  { id: 'web_directory', name: 'Web Directory' },
-  { id: 'facebook', name: 'Facebook (Coming Soon)' },
-  { id: 'instagram', name: 'Instagram (Coming Soon)' },
-];
+  { id: 'osm_nominatim', name: 'OSM / Nominatim' },
+  ];
 
 export function RunPage() {
   const [city, setCity] = useState(CITIES[0]);
@@ -20,8 +18,7 @@ export function RunPage() {
   const [error, setError] = useState<string | null>(null);
 
   const toggleSource = (id: DiscoverySource) => {
-    if (id === 'facebook' || id === 'instagram') return; // Not implemented yet
-    setSelectedSources(prev => 
+        setSelectedSources(prev => 
       prev.includes(id) ? prev.filter(s => s !== id) : [...prev, id]
     );
   };
@@ -90,12 +87,12 @@ export function RunPage() {
                 <button
                   key={source.id}
                   onClick={() => toggleSource(source.id)}
-                  disabled={source.id === 'facebook' || source.id === 'instagram'}
+                  disabled={false}
                   className={`flex items-center justify-between px-4 py-3 rounded-xl border transition-all text-sm ${
                     selectedSources.includes(source.id)
                       ? 'bg-orange-50 border-orange-200 text-orange-900 ring-1 ring-orange-200'
                       : 'bg-white border-zinc-200 text-zinc-600 hover:border-zinc-300'
-                  } ${(source.id === 'facebook' || source.id === 'instagram') ? 'opacity-50 cursor-not-allowed grayscale' : ''}`}
+                  } ${''}`}
                 >
                   <span>{source.name}</span>
                   {selectedSources.includes(source.id) && <CheckCircle2 className="w-4 h-4" />}

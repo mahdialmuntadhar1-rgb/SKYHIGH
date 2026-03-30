@@ -39,18 +39,26 @@ export const IRAQ_CITIES: CityConfig[] = [
 ];
 
 export const SOURCES: Source[] = [
-  { id: 'geoapify', name: 'Geoapify', type: 'api', freeTier: true, bulkSupport: true, socialSupport: false, priority: 1, enabled: true },
-  { id: 'foursquare', name: 'Foursquare', type: 'api', freeTier: true, bulkSupport: true, socialSupport: true, priority: 2, enabled: true },
-  { id: 'here', name: 'HERE', type: 'api', freeTier: true, bulkSupport: true, socialSupport: false, priority: 3, enabled: true },
-  { id: 'tomtom', name: 'TomTom', type: 'api', freeTier: true, bulkSupport: true, socialSupport: false, priority: 4, enabled: true },
-  { id: 'opencage', name: 'OpenCage', type: 'api', freeTier: true, bulkSupport: true, socialSupport: false, priority: 5, enabled: false },
-  { id: 'serpapi', name: 'SerpApi', type: 'scraper', freeTier: false, bulkSupport: true, socialSupport: true, priority: 1, enabled: true },
-  { id: 'outscraper', name: 'Outscraper', type: 'scraper', freeTier: false, bulkSupport: true, socialSupport: true, priority: 2, enabled: true },
-  { id: 'apify', name: 'Apify', type: 'scraper', freeTier: false, bulkSupport: true, socialSupport: true, priority: 3, enabled: true },
-  { id: 'osm', name: 'OSM/Nominatim', type: 'api', freeTier: true, bulkSupport: false, socialSupport: false, priority: 6, enabled: true },
-  { id: 'csv', name: 'CSV Upload', type: 'file', freeTier: true, bulkSupport: true, socialSupport: true, priority: 1, enabled: true },
-  { id: 'xlsx', name: 'XLSX Upload', type: 'file', freeTier: true, bulkSupport: true, socialSupport: true, priority: 2, enabled: true },
-  { id: 'json', name: 'JSON Upload', type: 'file', freeTier: true, bulkSupport: true, socialSupport: true, priority: 3, enabled: true },
+  {
+    id: 'osm_nominatim',
+    name: 'OSM / Nominatim',
+    type: 'api',
+    freeTier: true,
+    bulkSupport: false,
+    socialSupport: false,
+    priority: 1,
+    enabled: true,
+  },
+  {
+    id: 'gemini',
+    name: 'Gemini Research',
+    type: 'api',
+    freeTier: false,
+    bulkSupport: false,
+    socialSupport: true,
+    priority: 2,
+    enabled: true,
+  },
 ];
 
 export const CATEGORIES = [

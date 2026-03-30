@@ -10,7 +10,7 @@ export type BusinessStatus =
 export type SourceType = 'api' | 'scraper' | 'file';
 
 export interface Source {
-  id: string;
+  id: DiscoverySource;
   name: string;
   type: SourceType;
   freeTier: boolean;
@@ -18,43 +18,41 @@ export interface Source {
   socialSupport: boolean;
   priority: number;
   enabled: boolean;
+  reasonDisabled?: string;
 }
 
 export interface Business {
   id: string;
   name: string;
-  local_name?: string;
+  local_name?: string | null;
   city: string;
-  district: string;
-  city_center_zone: string;
+  district?: string | null;
+  city_center_zone?: string | null;
   category: string;
-  subcategory?: string;
-  phone?: string;
-  email?: string;
-  website?: string;
+  subcategory?: string | null;
+  phone?: string | null;
+  email?: string | null;
+  website?: string | null;
+  facebook_url?: string | null;
+  instagram_url?: string | null;
   social_media?: {
     facebook?: string;
     instagram?: string;
     whatsapp?: string;
-  };
-  address: string;
-  latitude: number;
-  longitude: number;
-  sources: string[]; // Source IDs
-  completeness_score: number; // 0-100
-  verification_score: number; // 0-100
-  duplicate_risk: number; // 0-100
-  suburb_risk: number; // 0-100
-  status: BusinessStatus;
-  created_at: string;
-  updated_at: string;
-  qc_notes?: string;
-  publish_readiness_score?: number;
-  source?: string;
-  source_url?: string;
-  confidence_score?: number;
-  coverage_type?: string;
-  raw_data?: any;
+  } | null;
+  address?: string | null;
+  latitude?: number | null;
+  longitude?: number | null;
+  status?: BusinessStatus | null;
+  created_at?: string;
+  updated_at?: string;
+  qc_notes?: string | null;
+  publish_readiness_score?: number | null;
+  source?: string | null;
+  source_url?: string | null;
+  confidence_score?: number | null;
+  coverage_type?: string | null;
+  raw_data?: unknown;
 }
 
 export interface CityConfig {
@@ -71,7 +69,7 @@ export interface AdminCityConfig {
   approved_central_zones: string[];
 }
 
-export type DiscoverySource = 'gemini' | 'web_directory' | 'facebook' | 'instagram' | 'google_maps' | 'foursquare' | 'custom_file';
+export type DiscoverySource = 'gemini' | 'osm_nominatim';
 
 export interface DiscoveryResult {
   summary: string;
@@ -84,4 +82,11 @@ export interface DiscoveryRequest {
   city: string;
   category: string;
   sources: DiscoverySource[];
+}
+
+export interface DashboardStats {
+  totalBusinesses: number;
+  countsByCity: Array<{ city: string; count: number }>;
+  countsBySource: Array<{ source: string; count: number }>;
+  recentBusinesses: Business[];
 }
