@@ -157,12 +157,23 @@ export async function runDiscovery(req: DiscoveryRequest): Promise<DiscoveryResu
     }
     seenInBatch.add(dedupeKey);
 
-    const { data: existing } = await supabase
+    let existingQuery = supabase
       .from('businesses')
       .select('id, name, city, phone, latitude, longitude, sources, raw_data, confidence_score')
       .eq('city', biz.city)
-      .or(`name.eq."${biz.name}",phone.eq."${normalizedPhone || 'NONE'}"`)
+      .eq('name', biz.name)
       .maybeSingle();
+
+    if (!biz.name && normalizedPhone) {
+      existingQuery = supabase
+        .from('businesses')
+        .select('id, name, city, phone, latitude, longitude, sources, raw_data, confidence_score')
+        .eq('city', biz.city)
+        .eq('phone', normalizedPhone)
+        .maybeSingle();
+    }
+
+    const { data: existing } = await existingQuery;
 
     if (existing) {
       const updatedSources = Array.from(new Set([...(existing.sources || []), sourceId]));

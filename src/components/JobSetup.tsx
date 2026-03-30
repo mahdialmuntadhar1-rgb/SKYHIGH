@@ -26,6 +26,11 @@ import { motion } from 'motion/react';
 import { IRAQ_CITIES, CATEGORIES, DISCOVERY_SOURCES } from '../constants';
 import { DiscoverySource } from '../types';
 
+interface JobSetupProps {
+  selectedSources: DiscoverySource[];
+  onSelectedSourcesChange: (sources: DiscoverySource[]) => void;
+}
+
 const iconMap: Record<string, any> = {
   MapPin,
   Layers,
@@ -38,15 +43,12 @@ const iconMap: Record<string, any> = {
   Send
 };
 
-export function JobSetup() {
+export function JobSetup({ selectedSources, onSelectedSourcesChange }: JobSetupProps) {
   const [selectedCity, setSelectedCity] = useState(IRAQ_CITIES[0]);
   const [selectedDistrict, setSelectedDistrict] = useState(IRAQ_CITIES[0].districts[0]);
   const [selectedZone, setSelectedZone] = useState(IRAQ_CITIES[0].districts[0].central_zones[0]);
   const [selectedCategory, setSelectedCategory] = useState(CATEGORIES[0]);
   const [keyword, setKeyword] = useState('');
-  const [selectedSources, setSelectedSources] = useState<DiscoverySource[]>(
-    DISCOVERY_SOURCES.filter(s => s.defaultChecked).map(s => s.id)
-  );
 
   const [isRunning, setIsRunning] = useState(false);
   const [progress, setProgress] = useState(0);
@@ -63,18 +65,18 @@ export function JobSetup() {
   });
 
   const handleToggleSource = (sourceId: DiscoverySource) => {
-    setSelectedSources(prev => 
-      prev.includes(sourceId) 
-        ? prev.filter(id => id !== sourceId) 
-        : [...prev, sourceId]
+    onSelectedSourcesChange(
+      selectedSources.includes(sourceId)
+        ? selectedSources.filter((id) => id !== sourceId)
+        : [...selectedSources, sourceId]
     );
   };
 
   const handleSelectAllSources = () => {
     if (selectedSources.length === DISCOVERY_SOURCES.length) {
-      setSelectedSources([]);
+      onSelectedSourcesChange([]);
     } else {
-      setSelectedSources(DISCOVERY_SOURCES.map(s => s.id));
+      onSelectedSourcesChange(DISCOVERY_SOURCES.map(s => s.id));
     }
   };
 

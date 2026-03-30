@@ -68,6 +68,8 @@ export function Dashboard() {
         </div>
       </div>
 
+
+      <div className="bg-amber-50 border border-amber-200 text-amber-800 rounded-xl px-4 py-3 text-sm font-medium">Demo mode: charts use static sample data and are not connected to Supabase yet.</div>
       {/* Stats Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         {stats.map((stat) => (
