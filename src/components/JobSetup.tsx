@@ -1,22 +1,35 @@
 import React, { useState } from 'react';
-import { 
-  MapPin, 
-  Search, 
-  Filter, 
-  Zap, 
-  ShieldCheck, 
-  AlertTriangle, 
+import {
+  MapPin,
+  Search,
+  Filter,
+  Zap,
+  ShieldCheck,
+  AlertTriangle,
   ChevronDown,
   Layers,
   Settings2,
-  Play
+  Play,
+  Loader2,
+  CheckCircle2,
+  AlertCircle
 } from 'lucide-react';
 import { IRAQ_CITIES, CATEGORIES } from '../constants';
+import { DiscoveryResult } from '../types';
 
-export function JobSetup() {
+interface JobSetupProps {
+  selectedSourcesCount: number;
+  onRun: (payload: { city: string; category: string }) => Promise<void>;
+  isRunning: boolean;
+  runResult: DiscoveryResult | null;
+  runError: string | null;
+}
+
+export function JobSetup({ selectedSourcesCount, onRun, isRunning, runResult, runError }: JobSetupProps) {
   const [selectedCity, setSelectedCity] = useState(IRAQ_CITIES[0]);
   const [selectedDistrict, setSelectedDistrict] = useState(IRAQ_CITIES[0].districts[0]);
   const [selectedZone, setSelectedZone] = useState(IRAQ_CITIES[0].districts[0].central_zones[0]);
+  const [selectedCategory, setSelectedCategory] = useState(CATEGORIES[0]);
 
   const [toggles, setToggles] = useState({
     freeTierOnly: false,
@@ -31,6 +44,10 @@ export function JobSetup() {
     setToggles(prev => ({ ...prev, [key]: !prev[key] }));
   };
 
+  const handleStart = async () => {
+    await onRun({ city: selectedCity.name, category: selectedCategory });
+  };
+
   return (
     <div className="bg-white border border-zinc-200 rounded-2xl shadow-sm h-full flex flex-col overflow-hidden">
       <div className="p-6 border-b border-zinc-100 bg-zinc-50 flex items-center justify-between">
@@ -38,9 +55,13 @@ export function JobSetup() {
           <h2 className="text-lg font-bold tracking-tight text-zinc-900">Job Setup</h2>
           <p className="text-xs text-zinc-500 font-medium uppercase tracking-wider">Configure collection parameters</p>
         </div>
-        <button className="flex items-center gap-2 px-6 py-2.5 bg-orange-600 text-white rounded-xl text-sm font-bold hover:bg-orange-500 transition-all shadow-lg shadow-orange-600/20 active:scale-95">
-          <Play className="w-4 h-4 fill-white" />
-          Start Collection
+        <button
+          onClick={handleStart}
+          disabled={isRunning || selectedSourcesCount === 0}
+          className="flex items-center gap-2 px-6 py-2.5 bg-orange-600 text-white rounded-xl text-sm font-bold hover:bg-orange-500 disabled:bg-zinc-400 disabled:cursor-not-allowed transition-all shadow-lg shadow-orange-600/20 active:scale-95"
+        >
+          {isRunning ? <Loader2 className="w-4 h-4 animate-spin" /> : <Play className="w-4 h-4 fill-white" />}
+          {isRunning ? 'Running...' : 'Start Collection'}
         </button>
       </div>
 
@@ -55,7 +76,7 @@ export function JobSetup() {
             <div className="space-y-1.5">
               <label className="text-xs font-bold text-zinc-500 ml-1">City</label>
               <div className="relative">
-                <select 
+                <select
                   value={selectedCity.name}
                   onChange={(e) => {
                     const city = IRAQ_CITIES.find(c => c.name === e.target.value)!;
@@ -73,7 +94,7 @@ export function JobSetup() {
             <div className="space-y-1.5">
               <label className="text-xs font-bold text-zinc-500 ml-1">District</label>
               <div className="relative">
-                <select 
+                <select
                   value={selectedDistrict.name}
                   onChange={(e) => {
                     const district = selectedCity.districts.find(d => d.name === e.target.value)!;
@@ -90,7 +111,7 @@ export function JobSetup() {
             <div className="space-y-1.5">
               <label className="text-xs font-bold text-zinc-500 ml-1">Central Zone</label>
               <div className="relative">
-                <select 
+                <select
                   value={selectedZone}
                   onChange={(e) => setSelectedZone(e.target.value)}
                   className="w-full bg-zinc-50 border border-zinc-200 rounded-xl px-4 py-2.5 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-orange-500/20 appearance-none"
@@ -103,7 +124,6 @@ export function JobSetup() {
           </div>
         </section>
 
-        {/* Category & Keywords */}
         <section className="space-y-4">
           <div className="flex items-center gap-2 text-zinc-400">
             <Filter className="w-4 h-4" />
@@ -113,7 +133,11 @@ export function JobSetup() {
             <div className="space-y-1.5">
               <label className="text-xs font-bold text-zinc-500 ml-1">Main Category</label>
               <div className="relative">
-                <select className="w-full bg-zinc-50 border border-zinc-200 rounded-xl px-4 py-2.5 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-orange-500/20 appearance-none">
+                <select
+                  value={selectedCategory}
+                  onChange={(e) => setSelectedCategory(e.target.value)}
+                  className="w-full bg-zinc-50 border border-zinc-200 rounded-xl px-4 py-2.5 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-orange-500/20 appearance-none"
+                >
                   {CATEGORIES.map(cat => <option key={cat} value={cat}>{cat}</option>)}
                 </select>
                 <ChevronDown className="w-4 h-4 absolute right-3 top-1/2 -translate-y-1/2 text-zinc-400 pointer-events-none" />
@@ -123,15 +147,39 @@ export function JobSetup() {
               <label className="text-xs font-bold text-zinc-500 ml-1">Keyword Search</label>
               <div className="relative">
                 <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400" />
-                <input 
-                  type="text" 
-                  placeholder="e.g. 'Coffee Shop', 'Pharmacy'..." 
+                <input
+                  type="text"
+                  placeholder="e.g. 'Coffee Shop', 'Pharmacy'..."
                   className="w-full bg-zinc-50 border border-zinc-200 rounded-xl pl-9 pr-4 py-2.5 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-orange-500/20"
                 />
               </div>
             </div>
           </div>
         </section>
+
+        {(runError || runResult) && (
+          <section className={`p-4 rounded-xl border ${runError ? 'bg-red-50 border-red-200 text-red-900' : 'bg-emerald-50 border-emerald-200 text-emerald-900'}`}>
+            <div className="flex items-start gap-3">
+              {runError ? <AlertCircle className="w-5 h-5 mt-0.5" /> : <CheckCircle2 className="w-5 h-5 mt-0.5" />}
+              <div className="space-y-1 text-sm">
+                <p className="font-bold">{runError ? 'Collection failed' : 'Collection complete'}</p>
+                {runError ? (
+                  <p>{runError}</p>
+                ) : (
+                  <>
+                    <p>{runResult?.summary}</p>
+                    <p>Inserted: <span className="font-bold">{runResult?.insertedCount ?? 0}</span> · Skipped: <span className="font-bold">{runResult?.skippedCount ?? 0}</span></p>
+                    {runResult && runResult.errors.length > 0 && (
+                      <ul className="list-disc list-inside text-xs mt-1">
+                        {runResult.errors.map((err, idx) => <li key={idx}>{err}</li>)}
+                      </ul>
+                    )}
+                  </>
+                )}
+              </div>
+            </div>
+          </section>
+        )}
 
         {/* Collection Parameters */}
         <section className="space-y-4">
@@ -157,7 +205,6 @@ export function JobSetup() {
           </div>
         </section>
 
-        {/* Smart Toggles */}
         <section className="space-y-4">
           <div className="flex items-center gap-2 text-zinc-400">
             <Zap className="w-4 h-4" />
@@ -172,12 +219,12 @@ export function JobSetup() {
               { id: 'centralCityOnly', label: 'Central City Only', icon: ShieldCheck },
               { id: 'rejectSuburbs', label: 'Reject Suburbs Automatically', icon: AlertTriangle },
             ].map((toggle) => (
-              <button 
+              <button
                 key={toggle.id}
-                onClick={() => handleToggle(toggle.id as any)}
+                onClick={() => handleToggle(toggle.id as keyof typeof toggles)}
                 className={`flex items-center justify-between p-3 rounded-xl border transition-all ${
-                  toggles[toggle.id as keyof typeof toggles] 
-                    ? 'bg-orange-50 border-orange-200 text-orange-900' 
+                  toggles[toggle.id as keyof typeof toggles]
+                    ? 'bg-orange-50 border-orange-200 text-orange-900'
                     : 'bg-white border-zinc-100 text-zinc-500 hover:border-zinc-200'
                 }`}
               >
