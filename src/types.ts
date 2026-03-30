@@ -1,57 +1,32 @@
-export const SOURCE_IDS = ["gemini", "facebook", "instagram", "web_directory"] as const;
-export type SourceId = (typeof SOURCE_IDS)[number];
-
-export type DiscoveryInput = {
-  city: string;
-  category: string;
-  sources: SourceId[];
-};
-
-export type RawBusiness = {
-  name?: string;
-  city?: string;
-  category?: string;
-  phone?: string;
-  source: SourceId;
-  sourceUrl?: string;
-  address?: string;
-  notes?: string;
-};
-
-export type NormalizedBusiness = {
+export interface Business {
+  id?: string;
   name: string;
+  local_name?: string;
+  category: string;
+  city: string;
+  governorate?: string;
+  address?: string;
+  phone?: string;
+  website?: string;
+  facebook_url?: string;
+  instagram_url?: string;
+  source: string;
+  source_url?: string;
+  confidence_score: number;
+  created_at?: string;
+}
+
+export type DiscoverySource = 'gemini' | 'facebook' | 'instagram' | 'web_directory';
+
+export interface DiscoveryRequest {
   city: string;
   category: string;
-  phone: string | null;
-  source: SourceId;
-  sourceUrl: string | null;
-  address: string | null;
-  notes: string | null;
-  confidenceScore: number;
-};
+  sources: DiscoverySource[];
+}
 
-export type AdapterResult = {
-  source: SourceId;
-  records: RawBusiness[];
-  errors: string[];
-};
-
-export type RunSummary = {
-  requestedSources: SourceId[];
-  attemptedSources: SourceId[];
-  successfulSources: SourceId[];
-  skippedSources: { source: SourceId; reason: string }[];
-  adapterErrors: { source: SourceId; error: string }[];
-  discoveredCount: number;
-  normalizedCount: number;
-  deduplicatedCount: number;
+export interface DiscoveryResult {
+  summary: string;
   insertedCount: number;
-};
-
-export type BusinessFilters = {
-  page: number;
-  pageSize: number;
-  city?: string;
-  category?: string;
-  source?: SourceId;
-};
+  skippedCount: number;
+  errors: string[];
+}

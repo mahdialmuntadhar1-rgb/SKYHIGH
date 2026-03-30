@@ -1,30 +1,42 @@
-# SCAPERAPP (minimal backend-first)
+# Supabase Schema for Iraq Business Discovery
 
-## Setup
+Run this SQL in your Supabase SQL Editor to set up the database.
 
-1. Install dependencies:
-   ```bash
-   npm install
-   ```
-2. Configure environment:
-   ```bash
-   cp .env.example .env
-   ```
-3. Add Supabase and optional Gemini keys.
-4. Create `businesses` table using `supabase/schema.sql`.
+```sql
+-- Create the businesses table
+CREATE TABLE businesses (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  name TEXT NOT NULL,
+  local_name TEXT,
+  category TEXT NOT NULL,
+  city TEXT NOT NULL,
+  governorate TEXT,
+  address TEXT,
+  phone TEXT,
+  website TEXT,
+  facebook_url TEXT,
+  instagram_url TEXT,
+  source TEXT NOT NULL,
+  source_url TEXT,
+  confidence_score FLOAT DEFAULT 0.0,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
 
-## Run
+-- Add indexes for common filters
+CREATE INDEX idx_businesses_city ON businesses(city);
+CREATE INDEX idx_businesses_category ON businesses(category);
+CREATE INDEX idx_businesses_source ON businesses(source);
 
-```bash
-npm run dev
+-- Add a unique constraint for basic deduplication
+-- Note: This is a strict constraint. In production, you might prefer 
+-- application-level logic or a more flexible index.
+-- ALTER TABLE businesses ADD CONSTRAINT unique_business UNIQUE (name, phone, city);
 ```
 
-Open:
-- Run page: `http://localhost:3000/`
-- Results page: `http://localhost:3000/results`
+## Setup Instructions
 
-## API
-
-- `GET /api/health`
-- `POST /api/run`
-- `GET /api/businesses`
+1. Create a new Supabase project.
+2. Run the SQL above in the SQL Editor.
+3. Copy your `SUPABASE_URL`, `SUPABASE_ANON_KEY`, and `SUPABASE_SERVICE_ROLE_KEY` to your secrets/env.
+4. Add `GEMINI_API_KEY` to your secrets.
+5. Run `npm run dev` to start the app.
