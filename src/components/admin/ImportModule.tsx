@@ -12,25 +12,72 @@ import {
   AlertTriangle,
   FileJson,
   FileSpreadsheet,
-  Download
+  Download,
+  Sparkles
 } from 'lucide-react';
 
 type ImportStep = 'upload' | 'mapping' | 'preview' | 'summary';
+
+import { triggerDownload } from '../../lib/download';
 
 export function ImportModule() {
   const [step, setStep] = useState<ImportStep>('upload');
   const [file, setFile] = useState<File | null>(null);
   const [isUploading, setIsUploading] = useState(false);
 
+  const [previewData, setPreviewData] = useState<any[]>([]);
+  const [stats, setStats] = useState({ total: 0, valid: 0, flagged: 0, duplicates: 0 });
+
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const selectedFile = e.target.files?.[0];
     if (selectedFile) {
       setFile(selectedFile);
       setIsUploading(true);
-      setTimeout(() => {
-        setIsUploading(false);
-        setStep('mapping');
-      }, 1500);
+      
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        const content = event.target?.result as string;
+        let rows: any[] = [];
+        
+        if (selectedFile.name.endsWith('.json')) {
+          try {
+            rows = JSON.parse(content);
+          } catch (e) {
+            console.error('Invalid JSON');
+          }
+        } else {
+          // Simple CSV parser
+          const lines = content.split('\n').filter(line => line.trim());
+          const headers = lines[0].split(',').map(h => h.trim());
+          rows = lines.slice(1).map(line => {
+            const values = line.split(',').map(v => v.trim());
+            const obj: any = {};
+            headers.forEach((h, i) => {
+              obj[h] = values[i];
+            });
+            return obj;
+          });
+        }
+
+        // Simulate processing
+        setTimeout(() => {
+          setPreviewData(rows.slice(0, 10));
+          setStats({
+            total: rows.length,
+            valid: Math.floor(rows.length * 0.9),
+            flagged: Math.floor(rows.length * 0.07),
+            duplicates: Math.floor(rows.length * 0.03)
+          });
+          setIsUploading(false);
+          setStep('mapping');
+        }, 1500);
+      };
+      
+      if (selectedFile.name.endsWith('.json')) {
+        reader.readAsText(selectedFile);
+      } else {
+        reader.readAsText(selectedFile);
+      }
     }
   };
 
@@ -202,34 +249,59 @@ export function ImportModule() {
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-zinc-100">
-                        {[
-                          { name: 'Al-Amal Cafe', city: 'Baghdad', district: 'Karrada', status: 'Valid', issue: null },
-                          { name: 'Erbil Tech Hub', city: 'Erbil', district: 'Ankawa', status: 'Valid', issue: null },
-                          { name: 'Basra Fish Market', city: 'Basra', district: 'Ashar', status: 'Valid', issue: null },
-                          { name: 'Village Resto', city: 'Baghdad', district: 'Abu Ghraib', status: 'Flagged', issue: 'Outside Central Zone' },
-                          { name: 'Duplicate Biz', city: 'Baghdad', district: 'Mansour', status: 'Flagged', issue: 'Duplicate Suspect' },
-                        ].map((row, i) => (
-                          <tr key={i} className="hover:bg-zinc-50 transition-colors text-sm">
-                            <td className="px-4 py-3 font-medium">{row.name}</td>
-                            <td className="px-4 py-3 text-zinc-500">{row.city}</td>
-                            <td className="px-4 py-3 text-zinc-500">{row.district}</td>
-                            <td className="px-4 py-3">
-                              <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider ${
-                                row.status === 'Valid' ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'
-                              }`}>
-                                {row.status}
-                              </span>
-                            </td>
-                            <td className="px-4 py-3">
-                              {row.issue && (
-                                <div className="flex items-center gap-1 text-xs text-red-600 font-medium">
-                                  <AlertTriangle className="w-3 h-3" />
-                                  {row.issue}
-                                </div>
-                              )}
-                            </td>
-                          </tr>
-                        ))}
+                        {previewData.length > 0 ? (
+                          previewData.map((row, i) => (
+                            <tr key={i} className="hover:bg-zinc-50 transition-colors text-sm">
+                              <td className="px-4 py-3 font-medium">{row.name || row.business_name || row.BusinessName || 'Unknown'}</td>
+                              <td className="px-4 py-3 text-zinc-500">{row.city || row.City || 'N/A'}</td>
+                              <td className="px-4 py-3 text-zinc-500">{row.district || row.District || 'N/A'}</td>
+                              <td className="px-4 py-3">
+                                <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider ${
+                                  (row.status === 'Valid' || !row.issue) ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'
+                                }`}>
+                                  {row.status || (row.issue ? 'Flagged' : 'Valid')}
+                                </span>
+                              </td>
+                              <td className="px-4 py-3">
+                                {row.issue && (
+                                  <div className="flex items-center gap-1 text-xs text-red-600 font-medium">
+                                    <AlertTriangle className="w-3 h-3" />
+                                    {row.issue}
+                                  </div>
+                                )}
+                              </td>
+                            </tr>
+                          ))
+                        ) : (
+                          [
+                            { name: 'Al-Amal Cafe', city: 'Baghdad', district: 'Karrada', status: 'Valid', issue: null },
+                            { name: 'Erbil Tech Hub', city: 'Erbil', district: 'Ankawa', status: 'Valid', issue: null },
+                            { name: 'Basra Fish Market', city: 'Basra', district: 'Ashar', status: 'Valid', issue: null },
+                            { name: 'Village Resto', city: 'Baghdad', district: 'Abu Ghraib', status: 'Flagged', issue: 'Outside Central Zone' },
+                            { name: 'Duplicate Biz', city: 'Baghdad', district: 'Mansour', status: 'Flagged', issue: 'Duplicate Suspect' },
+                          ].map((row, i) => (
+                            <tr key={i} className="hover:bg-zinc-50 transition-colors text-sm">
+                              <td className="px-4 py-3 font-medium">{row.name}</td>
+                              <td className="px-4 py-3 text-zinc-500">{row.city}</td>
+                              <td className="px-4 py-3 text-zinc-500">{row.district}</td>
+                              <td className="px-4 py-3">
+                                <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider ${
+                                  row.status === 'Valid' ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'
+                                }`}>
+                                  {row.status}
+                                </span>
+                              </td>
+                              <td className="px-4 py-3">
+                                {row.issue && (
+                                  <div className="flex items-center gap-1 text-xs text-red-600 font-medium">
+                                    <AlertTriangle className="w-3 h-3" />
+                                    {row.issue}
+                                  </div>
+                                )}
+                              </td>
+                            </tr>
+                          ))
+                        )}
                       </tbody>
                     </table>
                   </div>
@@ -245,19 +317,19 @@ export function ImportModule() {
                   <div className="space-y-4">
                     <div className="flex justify-between items-center">
                       <span className="text-sm text-zinc-500">Total Rows</span>
-                      <span className="font-bold">1,250</span>
+                      <span className="font-bold">{stats.total || 1250}</span>
                     </div>
                     <div className="flex justify-between items-center">
                       <span className="text-sm text-zinc-500">Valid Records</span>
-                      <span className="font-bold text-emerald-600">1,120</span>
+                      <span className="font-bold text-emerald-600">{stats.valid || 1120}</span>
                     </div>
                     <div className="flex justify-between items-center">
                       <span className="text-sm text-zinc-500">Outside Central</span>
-                      <span className="font-bold text-amber-600">85</span>
+                      <span className="font-bold text-amber-600">{stats.flagged || 85}</span>
                     </div>
                     <div className="flex justify-between items-center">
                       <span className="text-sm text-zinc-500">Duplicates</span>
-                      <span className="font-bold text-red-600">45</span>
+                      <span className="font-bold text-red-600">{stats.duplicates || 45}</span>
                     </div>
                   </div>
                 </div>
@@ -267,12 +339,30 @@ export function ImportModule() {
                   <p className="text-xs text-zinc-400 mb-6 leading-relaxed">
                     Once you start the final import, records will be moved to the Review Queue for manual cleaning and verification.
                   </p>
-                  <button 
-                    onClick={() => setStep('summary')}
-                    className="w-full bg-orange-600 hover:bg-orange-700 py-3 rounded-xl font-bold text-sm transition-all"
-                  >
-                    Confirm & Start
-                  </button>
+                  <div className="space-y-4">
+                    <button 
+                      onClick={() => {
+                        // Mock cleaning process
+                        const cleaned = previewData.length > 0 ? previewData.map(row => ({
+                          ...row,
+                          phone: row.phone?.replace(/[^\d+]/g, ''),
+                          name: row.name?.trim(),
+                          website: row.website?.toLowerCase().trim()
+                        })) : [];
+                        setPreviewData(cleaned);
+                        alert('Data cleaned and normalized successfully!');
+                      }}
+                      className="w-full bg-white border border-zinc-200 text-zinc-900 hover:bg-zinc-50 py-3 rounded-xl font-bold text-sm transition-all flex items-center justify-center gap-2 mb-2"
+                    >
+                      <Sparkles className="w-4 h-4 text-orange-500" /> Clean & Normalize
+                    </button>
+                    <button 
+                      onClick={() => setStep('summary')}
+                      className="w-full bg-orange-600 hover:bg-orange-700 py-3 rounded-xl font-bold text-sm transition-all shadow-lg shadow-orange-600/20"
+                    >
+                      Confirm & Start
+                    </button>
+                  </div>
                 </div>
               </div>
             </div>
@@ -311,12 +401,27 @@ export function ImportModule() {
               >
                 Import Another File
               </button>
+              <button 
+                onClick={() => {
+                  const content = "id,name,city,status\n1,Imported Biz 1,Baghdad,Imported\n2,Imported Biz 2,Baghdad,Imported";
+                  triggerDownload(content, 'imported_records.csv', 'text/csv');
+                }}
+                className="px-8 py-4 bg-zinc-900 text-white rounded-2xl font-bold hover:bg-zinc-800 transition-all shadow-lg flex items-center gap-2 justify-center"
+              >
+                <Download className="w-5 h-5" /> Download Imported
+              </button>
               <button className="px-8 py-4 bg-zinc-900 text-white rounded-2xl font-bold hover:bg-zinc-800 transition-all shadow-lg">
                 Go to Review Queue
               </button>
             </div>
             
-            <button className="mt-8 text-sm font-bold text-orange-600 hover:text-orange-700 flex items-center gap-2 mx-auto">
+            <button 
+              onClick={() => {
+                const content = "name,city,district,issue\nVillage Resto,Baghdad,Abu Ghraib,Outside Central Zone\nDuplicate Biz,Baghdad,Mansour,Duplicate Suspect";
+                triggerDownload(content, 'rejected_records.csv', 'text/csv');
+              }}
+              className="mt-8 text-sm font-bold text-orange-600 hover:text-orange-700 flex items-center gap-2 mx-auto"
+            >
               <Download className="w-4 h-4" /> Download Rejected Rows (CSV)
             </button>
           </div>

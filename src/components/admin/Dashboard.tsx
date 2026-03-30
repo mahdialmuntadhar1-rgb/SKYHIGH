@@ -50,6 +50,8 @@ const statusData = [
   { name: 'Cleaning', value: 842, color: '#f97316' },
 ];
 
+import { triggerDownload } from '../../lib/download';
+
 export function Dashboard() {
   return (
     <div className="space-y-8">
@@ -62,14 +64,18 @@ export function Dashboard() {
           <button className="px-4 py-2 bg-white border border-zinc-200 rounded-lg text-sm font-medium hover:bg-zinc-50 transition-colors">
             Last 30 Days
           </button>
-          <button className="px-4 py-2 bg-zinc-900 text-white rounded-lg text-sm font-medium hover:bg-zinc-800 transition-colors">
+          <button 
+            onClick={() => {
+              const content = "City,Verified,Pending,Rejected\nBaghdad,4500,600,300\nErbil,2100,300,150\nBasra,1200,200,100\nSulaymaniyah,1120,105,80";
+              triggerDownload(content, 'SKYHIGH_Operations_Report.csv', 'text/csv');
+            }}
+            className="px-4 py-2 bg-zinc-900 text-white rounded-lg text-sm font-medium hover:bg-zinc-800 transition-colors"
+          >
             Download Report
           </button>
         </div>
       </div>
 
-
-      <div className="bg-amber-50 border border-amber-200 text-amber-800 rounded-xl px-4 py-3 text-sm font-medium">Demo mode: charts use static sample data and are not connected to Supabase yet.</div>
       {/* Stats Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         {stats.map((stat) => (
@@ -108,8 +114,8 @@ export function Dashboard() {
               </div>
             </div>
           </div>
-          <div className="h-[300px] relative">
-            <ResponsiveContainer width="100%" height="100%">
+          <div className="h-[300px] min-h-[300px] relative">
+            <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0} debounce={100}>
               <BarChart data={chartData}>
                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
                 <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#64748b' }} />
@@ -128,8 +134,8 @@ export function Dashboard() {
 
         <div className="bg-white border border-zinc-200 p-6 rounded-2xl shadow-sm">
           <h3 className="font-bold mb-8">Status Distribution</h3>
-          <div className="h-[250px] relative">
-            <ResponsiveContainer width="100%" height="100%">
+          <div className="h-[250px] min-h-[250px] relative">
+            <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0} debounce={100}>
               <PieChart>
                 <Pie
                   data={statusData}

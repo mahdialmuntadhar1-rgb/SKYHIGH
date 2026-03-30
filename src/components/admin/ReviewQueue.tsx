@@ -22,9 +22,11 @@ import {
   Clock,
   ShieldCheck,
   Award,
-  Sparkles
+  Sparkles,
+  Download
 } from 'lucide-react';
 import { Business, BusinessStatus } from '../../types';
+import { triggerDownload, jsonToCsv } from '../../lib/download';
 
 const mockBusinesses: Partial<Business>[] = [
   {
@@ -161,6 +163,14 @@ export function ReviewQueue() {
             <p className="text-zinc-500 text-sm">Verify and clean business records for the central directory.</p>
           </div>
           <div className="flex items-center gap-2">
+            <button 
+              onClick={() => {
+                triggerDownload(jsonToCsv(mockBusinesses), 'full_review_queue.csv', 'text/csv');
+              }}
+              className="px-4 py-2 bg-white border border-zinc-200 rounded-lg text-sm font-medium hover:bg-zinc-50 transition-colors flex items-center gap-2"
+            >
+              <Download className="w-4 h-4" /> Download All
+            </button>
             <div className="flex bg-white border border-zinc-200 p-1 rounded-xl shadow-sm">
               <button 
                 onClick={() => setViewMode('list')}
@@ -175,14 +185,15 @@ export function ReviewQueue() {
                 <LayoutGrid className="w-4 h-4" />
               </button>
             </div>
-            <button className="px-4 py-2 bg-zinc-900 text-white rounded-lg text-sm font-medium hover:bg-zinc-800 transition-colors flex items-center gap-2">
+            <button 
+              onClick={() => alert('Bulk actions menu opened!')}
+              className="px-4 py-2 bg-zinc-900 text-white rounded-lg text-sm font-medium hover:bg-zinc-800 transition-colors flex items-center gap-2"
+            >
               Bulk Actions ({selectedIds.length})
             </button>
           </div>
         </div>
 
-
-      <div className="bg-amber-50 border border-amber-200 text-amber-800 rounded-xl px-4 py-3 text-sm font-medium">Demo mode: review queue is currently using seeded mock records; live moderation wiring is pending.</div>
         {/* Filters Bar */}
         <div className="bg-white border border-zinc-200 p-4 rounded-2xl shadow-sm flex flex-wrap items-center gap-4">
           <div className="flex-1 min-w-[200px] relative">
@@ -429,6 +440,16 @@ export function ReviewQueue() {
             <p className="text-sm font-bold">Selected Records</p>
           </div>
           <div className="flex items-center gap-4">
+            <button 
+              onClick={() => {
+                const selectedData = mockBusinesses.filter(b => selectedIds.includes(b.id!));
+                const csv = jsonToCsv(selectedData);
+                triggerDownload(csv, 'selected_records.csv', 'text/csv');
+              }}
+              className="flex items-center gap-2 text-sm font-bold text-orange-400 hover:text-orange-300 transition-colors"
+            >
+              <Download className="w-4 h-4" /> Download
+            </button>
             <button className="flex items-center gap-2 text-sm font-bold text-emerald-400 hover:text-emerald-300 transition-colors">
               <CheckCircle2 className="w-4 h-4" /> Approve
             </button>

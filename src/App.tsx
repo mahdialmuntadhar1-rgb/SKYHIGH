@@ -1,12 +1,18 @@
 import React, { useState } from 'react';
 import { Sidebar } from './components/Sidebar';
+import { StatsCards } from './components/StatsCards';
 import { SourceSelector } from './components/SourceSelector';
 import { JobSetup } from './components/JobSetup';
-import {
-  Bell,
-  Search,
-  ChevronRight,
-  BarChart3
+import { 
+  Bell, 
+  Search, 
+  User, 
+  ChevronRight, 
+  Plus,
+  BarChart3,
+  PieChart,
+  Activity,
+  ArrowUpRight
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Dashboard } from './components/admin/Dashboard';
@@ -14,21 +20,34 @@ import { ReviewQueue } from './components/admin/ReviewQueue';
 import { CityConfigPage } from './components/admin/CityConfig';
 import { ImportModule } from './components/admin/ImportModule';
 import { ExportModule } from './components/admin/ExportModule';
-import { DISCOVERY_SOURCES } from './constants';
-import { DiscoverySource } from './types';
+
+const chartData = [
+  { name: 'Baghdad', verified: 4500, pending: 1200, rejected: 300 },
+  { name: 'Erbil', verified: 3200, pending: 800, rejected: 150 },
+  { name: 'Basra', verified: 2100, pending: 600, rejected: 200 },
+  { name: 'Suly', verified: 1800, pending: 400, rejected: 100 },
+  { name: 'Mosul', verified: 1200, pending: 900, rejected: 400 },
+];
+
+const activityData = [
+  { time: '09:00', records: 120 },
+  { time: '10:00', records: 450 },
+  { time: '11:00', records: 890 },
+  { time: '12:00', records: 1200 },
+  { time: '13:00', records: 1100 },
+  { time: '14:00', records: 1500 },
+  { time: '15:00', records: 1800 },
+];
 
 export default function App() {
   const [activeTab, setActiveTab] = useState('dashboard');
-  const [selectedSources, setSelectedSources] = useState<DiscoverySource[]>(
-    DISCOVERY_SOURCES.filter((s) => s.defaultChecked).map((s) => s.id)
-  );
 
   const renderContent = () => {
     switch (activeTab) {
       case 'dashboard':
       case 'analytics':
         return (
-          <motion.div
+          <motion.div 
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5 }}
@@ -38,7 +57,7 @@ export default function App() {
         );
       case 'collection':
         return (
-          <motion.div
+          <motion.div 
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5 }}
@@ -51,14 +70,14 @@ export default function App() {
               </div>
             </div>
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 flex-1 min-h-0">
-              <SourceSelector selectedSources={selectedSources} onSelectedSourcesChange={setSelectedSources} />
-              <JobSetup selectedSources={selectedSources} onSelectedSourcesChange={setSelectedSources} />
+              <SourceSelector />
+              <JobSetup />
             </div>
           </motion.div>
         );
       case 'review':
         return (
-          <motion.div
+          <motion.div 
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ duration: 0.5 }}
@@ -68,7 +87,7 @@ export default function App() {
         );
       case 'upload':
         return (
-          <motion.div
+          <motion.div 
             initial={{ opacity: 0, scale: 0.98 }}
             animate={{ opacity: 1, scale: 1 }}
             transition={{ duration: 0.5 }}
@@ -78,7 +97,7 @@ export default function App() {
         );
       case 'export':
         return (
-          <motion.div
+          <motion.div 
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5 }}
@@ -88,7 +107,7 @@ export default function App() {
         );
       case 'zones':
         return (
-          <motion.div
+          <motion.div 
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5 }}
@@ -112,15 +131,16 @@ export default function App() {
   return (
     <div className="flex min-h-screen bg-zinc-50 font-sans text-zinc-900 selection:bg-orange-100 selection:text-orange-900">
       <Sidebar activeTab={activeTab} setActiveTab={setActiveTab} />
-
+      
       <main className="flex-1 flex flex-col min-w-0">
+        {/* Header */}
         <header className="h-20 bg-white border-b border-zinc-200 px-8 flex items-center justify-between sticky top-0 z-40">
           <div className="flex items-center gap-4 flex-1 max-w-xl">
             <div className="relative w-full group">
               <Search className="w-4 h-4 absolute left-4 top-1/2 -translate-y-1/2 text-zinc-400 group-focus-within:text-orange-600 transition-colors" />
-              <input
-                type="text"
-                placeholder="Search records, jobs, or sources..."
+              <input 
+                type="text" 
+                placeholder="Search records, jobs, or sources..." 
                 className="w-full pl-11 pr-4 py-2.5 bg-zinc-50 border border-zinc-200 rounded-2xl text-sm focus:outline-none focus:ring-4 focus:ring-orange-500/10 focus:border-orange-500/50 transition-all"
               />
             </div>
@@ -131,7 +151,7 @@ export default function App() {
               <div className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse" />
               <span className="text-[10px] font-black uppercase tracking-widest">Live Sync</span>
             </div>
-
+            
             <button className="p-2.5 bg-white border border-zinc-200 rounded-xl text-zinc-500 hover:text-zinc-900 hover:bg-zinc-50 transition-all relative">
               <Bell className="w-5 h-5" />
               <span className="absolute top-2 right-2 w-2 h-2 bg-orange-600 rounded-full border-2 border-white" />
@@ -152,12 +172,14 @@ export default function App() {
           </div>
         </header>
 
+        {/* Content Area */}
         <div className="p-8 flex-1 overflow-y-auto">
           <AnimatePresence mode="wait">
             {renderContent()}
           </AnimatePresence>
         </div>
 
+        {/* Footer Info */}
         <footer className="px-8 py-4 bg-white border-t border-zinc-200 flex items-center justify-between text-[10px] font-bold text-zinc-400 uppercase tracking-widest">
           <div className="flex items-center gap-6">
             <div className="flex items-center gap-2">

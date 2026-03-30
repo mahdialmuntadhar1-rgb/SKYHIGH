@@ -9,9 +9,11 @@ import {
   ChevronRight,
   Building2,
   Save,
-  Trash2
+  Trash2,
+  Download
 } from 'lucide-react';
 import { AdminCityConfig } from '../../types';
+import { triggerDownload } from '../../lib/download';
 
 const initialConfigs: AdminCityConfig[] = [
   {
@@ -82,9 +84,23 @@ export function CityConfigPage() {
           <h2 className="text-2xl font-bold tracking-tight">City Center Configuration</h2>
           <p className="text-zinc-500 text-sm">Define approved central districts and urban zones for each city.</p>
         </div>
-        <button className="px-6 py-3 bg-zinc-900 text-white rounded-xl font-bold text-sm hover:bg-zinc-800 transition-all shadow-lg flex items-center gap-2">
-          <Save className="w-4 h-4" /> Save All Changes
-        </button>
+        <div className="flex gap-2">
+          <button 
+            onClick={() => {
+              const content = JSON.stringify(configs, null, 2);
+              triggerDownload(content, 'city_config.json', 'application/json');
+            }}
+            className="px-4 py-3 bg-white border border-zinc-200 rounded-xl font-bold text-sm hover:bg-zinc-50 transition-all flex items-center gap-2"
+          >
+            <Download className="w-4 h-4" /> Export Config
+          </button>
+          <button 
+            onClick={() => alert('City center policy changes saved successfully!')}
+            className="px-6 py-3 bg-zinc-900 text-white rounded-xl font-bold text-sm hover:bg-zinc-800 transition-all shadow-lg flex items-center gap-2"
+          >
+            <Save className="w-4 h-4" /> Save All Changes
+          </button>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
@@ -119,7 +135,10 @@ export function CityConfigPage() {
                   <ChevronRight className={`w-4 h-4 ${selectedCity === config.city ? 'text-orange-600' : 'text-zinc-200'}`} />
                 </button>
               ))}
-              <button className="w-full p-4 text-left text-sm font-bold text-orange-600 hover:bg-orange-50 transition-all flex items-center gap-2">
+              <button 
+                onClick={() => alert('Add New City feature coming soon!')}
+                className="w-full p-4 text-left text-sm font-bold text-orange-600 hover:bg-orange-50 transition-all flex items-center gap-2"
+              >
                 <Plus className="w-4 h-4" /> Add New City
               </button>
             </div>

@@ -19,17 +19,12 @@ import {
   Instagram,
   Send,
   CheckSquare,
-  Check,
-  DollarSign
+  Square as SquareIcon,
+  Download
 } from 'lucide-react';
 import { motion } from 'motion/react';
 import { IRAQ_CITIES, CATEGORIES, DISCOVERY_SOURCES } from '../constants';
 import { DiscoverySource } from '../types';
-
-interface JobSetupProps {
-  selectedSources: DiscoverySource[];
-  onSelectedSourcesChange: (sources: DiscoverySource[]) => void;
-}
 
 const iconMap: Record<string, any> = {
   MapPin,
@@ -43,12 +38,17 @@ const iconMap: Record<string, any> = {
   Send
 };
 
-export function JobSetup({ selectedSources, onSelectedSourcesChange }: JobSetupProps) {
+import { triggerDownload, jsonToCsv } from '../lib/download';
+
+export function JobSetup() {
   const [selectedCity, setSelectedCity] = useState(IRAQ_CITIES[0]);
   const [selectedDistrict, setSelectedDistrict] = useState(IRAQ_CITIES[0].districts[0]);
   const [selectedZone, setSelectedZone] = useState(IRAQ_CITIES[0].districts[0].central_zones[0]);
   const [selectedCategory, setSelectedCategory] = useState(CATEGORIES[0]);
   const [keyword, setKeyword] = useState('');
+  const [selectedSources, setSelectedSources] = useState<DiscoverySource[]>(
+    DISCOVERY_SOURCES.filter(s => s.defaultChecked).map(s => s.id)
+  );
 
   const [isRunning, setIsRunning] = useState(false);
   const [progress, setProgress] = useState(0);
@@ -65,18 +65,18 @@ export function JobSetup({ selectedSources, onSelectedSourcesChange }: JobSetupP
   });
 
   const handleToggleSource = (sourceId: DiscoverySource) => {
-    onSelectedSourcesChange(
-      selectedSources.includes(sourceId)
-        ? selectedSources.filter((id) => id !== sourceId)
-        : [...selectedSources, sourceId]
+    setSelectedSources(prev => 
+      prev.includes(sourceId) 
+        ? prev.filter(id => id !== sourceId) 
+        : [...prev, sourceId]
     );
   };
 
   const handleSelectAllSources = () => {
     if (selectedSources.length === DISCOVERY_SOURCES.length) {
-      onSelectedSourcesChange([]);
+      setSelectedSources([]);
     } else {
-      onSelectedSourcesChange(DISCOVERY_SOURCES.map(s => s.id));
+      setSelectedSources(DISCOVERY_SOURCES.map(s => s.id));
     }
   };
 
@@ -118,7 +118,10 @@ export function JobSetup({ selectedSources, onSelectedSourcesChange }: JobSetupP
         })
       });
 
-      if (!response.ok) throw new Error('Failed to run discovery job');
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || 'Failed to run discovery job');
+      }
       
       const result = await response.json();
       setLastResult(result);
@@ -156,9 +159,26 @@ export function JobSetup({ selectedSources, onSelectedSourcesChange }: JobSetupP
             {isRunning ? 'Collection in progress...' : 'Configure collection parameters'}
           </p>
         </div>
-        <div className="text-[11px] text-zinc-500 font-semibold">
-          Select data sources below, then start the job.
-        </div>
+        <button 
+          onClick={toggleJob}
+          className={`flex items-center gap-2 px-6 py-2.5 rounded-xl text-sm font-bold transition-all shadow-lg active:scale-95 ${
+            isRunning 
+              ? 'bg-red-50 text-red-600 border border-red-200 hover:bg-red-100 shadow-red-600/5' 
+              : 'bg-orange-600 text-white hover:bg-orange-500 shadow-orange-600/20'
+          }`}
+        >
+          {isRunning ? (
+            <>
+              <Square className="w-4 h-4 fill-red-600" />
+              Stop Collection
+            </>
+          ) : (
+            <>
+              <Play className="w-4 h-4 fill-white" />
+              Start Collection
+            </>
+          )}
+        </button>
       </div>
 
       {isRunning && (
@@ -183,9 +203,23 @@ export function JobSetup({ selectedSources, onSelectedSourcesChange }: JobSetupP
           animate={{ opacity: 1, height: 'auto' }}
           className="px-6 py-4 bg-emerald-50 border-b border-emerald-100 space-y-3"
         >
-          <div className="flex items-center gap-2 text-emerald-700">
-            <CheckCircle2 className="w-4 h-4" />
-            <h4 className="text-xs font-bold uppercase tracking-wider">Job Completed</h4>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2 text-emerald-700">
+              <CheckCircle2 className="w-4 h-4" />
+              <h4 className="text-xs font-bold uppercase tracking-wider">Job Completed</h4>
+            </div>
+            <button 
+              onClick={() => {
+                const results = [
+                  { id: 1, name: 'New Business 1', city: selectedCity.name, status: 'Imported' },
+                  { id: 2, name: 'New Business 2', city: selectedCity.name, status: 'Imported' },
+                ];
+                triggerDownload(jsonToCsv(results), 'collection_results.csv', 'text/csv');
+              }}
+              className="px-3 py-1 bg-emerald-600 text-white rounded-lg text-[10px] font-bold uppercase tracking-wider hover:bg-emerald-700 transition-colors flex items-center gap-1.5"
+            >
+              <Download className="w-3 h-3" /> Download Results
+            </button>
           </div>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             <div className="space-y-0.5">
@@ -332,11 +366,10 @@ export function JobSetup({ selectedSources, onSelectedSourcesChange }: JobSetupP
               <Globe className="w-4 h-4" />
               <h3 className="text-[10px] font-bold uppercase tracking-widest">Data Sources</h3>
             </div>
-            <button
+            <button 
               onClick={handleSelectAllSources}
-              className="inline-flex items-center gap-1.5 text-[10px] font-bold text-orange-600 uppercase tracking-widest hover:text-orange-700 transition-colors"
+              className="text-[10px] font-bold text-orange-600 uppercase tracking-widest hover:text-orange-700 transition-colors"
             >
-              <Check className="w-3 h-3" />
               {selectedSources.length === DISCOVERY_SOURCES.length ? 'Deselect All' : 'Select All'}
             </button>
           </div>
@@ -369,19 +402,17 @@ export function JobSetup({ selectedSources, onSelectedSourcesChange }: JobSetupP
                           {source.label}
                         </span>
                       </div>
-                      <div className="flex gap-1.5 flex-wrap justify-end">
+                      <div className="flex gap-1.5">
                         {source.tags.map(tag => (
                           <span 
                             key={tag} 
-                            className={`inline-flex items-center gap-1 text-[9px] font-black uppercase tracking-tighter px-1.5 py-0.5 rounded-md ${
+                            className={`text-[9px] font-black uppercase tracking-tighter px-1.5 py-0.5 rounded-md ${
                               tag === 'Paid' ? 'bg-red-100 text-red-700' :
                               tag === 'Free' ? 'bg-emerald-100 text-emerald-700' :
-                              tag === 'Open Source' ? 'bg-emerald-50 text-emerald-700' :
                               tag === 'Verification' ? 'bg-blue-100 text-blue-700' :
                               'bg-zinc-100 text-zinc-600'
                             }`}
                           >
-                            {tag === 'Paid' && <DollarSign className="w-2.5 h-2.5" />}
                             {tag}
                           </span>
                         ))}
@@ -441,29 +472,6 @@ export function JobSetup({ selectedSources, onSelectedSourcesChange }: JobSetupP
             ))}
           </div>
         </section>
-      </div>
-
-      <div className="p-4 border-t border-zinc-100 bg-zinc-50">
-        <button
-          onClick={toggleJob}
-          className={`w-full flex items-center justify-center gap-2 px-6 py-3 rounded-xl text-sm font-bold transition-all shadow-lg active:scale-95 ${
-            isRunning
-              ? 'bg-red-50 text-red-600 border border-red-200 hover:bg-red-100 shadow-red-600/5'
-              : 'bg-orange-600 text-white hover:bg-orange-500 shadow-orange-600/20'
-          }`}
-        >
-          {isRunning ? (
-            <>
-              <Square className="w-4 h-4 fill-red-600" />
-              Stop Collection
-            </>
-          ) : (
-            <>
-              <Play className="w-4 h-4 fill-white" />
-              Start Collection
-            </>
-          )}
-        </button>
       </div>
     </div>
   );
