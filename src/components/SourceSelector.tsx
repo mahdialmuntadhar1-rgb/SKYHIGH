@@ -1,38 +1,53 @@
-import React, { useState } from 'react';
-import { 
-  CheckSquare, 
-  Square, 
-  Zap, 
-  Users, 
-  Layers, 
-  Settings2, 
-  Search,
-  AlertCircle
-} from 'lucide-react';
+import React, { useEffect, useMemo, useState } from 'react';
+import { CheckSquare, Square, Zap, Users, Layers, Search, AlertCircle } from 'lucide-react';
 import { SOURCES } from '../constants';
 import { Source } from '../types';
 
-export function SourceSelector() {
-  const [selectedIds, setSelectedIds] = useState<string[]>(SOURCES.filter(s => s.enabled).map(s => s.id));
+interface SourceSelectorProps {
+  selectedIds: string[];
+  onSelectionChange: (ids: string[]) => void;
+}
+
+export function SourceSelector({ selectedIds, onSelectionChange }: SourceSelectorProps) {
   const [searchQuery, setSearchQuery] = useState('');
+  const [sources, setSources] = useState<Source[]>(SOURCES);
+
+  useEffect(() => {
+    const loadSources = async () => {
+      try {
+        const response = await fetch('/api/sources');
+        if (!response.ok) return;
+        const payload = await response.json();
+        if (Array.isArray(payload.data)) {
+          setSources(payload.data);
+          const enabledIds = payload.data.filter((s: Source) => s.enabled).map((s: Source) => s.id);
+          if (selectedIds.length === 0) {
+            onSelectionChange(enabledIds);
+          }
+        }
+      } catch {
+        // keep local fallback data
+      }
+    };
+
+    loadSources();
+  }, []);
+
+  const enabledSourceIds = useMemo(() => sources.filter((s) => s.enabled).map((s) => s.id), [sources]);
 
   const toggleAll = () => {
-    if (selectedIds.length === SOURCES.length) {
-      setSelectedIds([]);
+    if (selectedIds.length === enabledSourceIds.length) {
+      onSelectionChange([]);
     } else {
-      setSelectedIds(SOURCES.map(s => s.id));
+      onSelectionChange(enabledSourceIds);
     }
   };
 
   const toggleSource = (id: string) => {
-    setSelectedIds(prev => 
-      prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]
-    );
+    onSelectionChange(selectedIds.includes(id) ? selectedIds.filter((i) => i !== id) : [...selectedIds, id]);
   };
 
-  const filteredSources = SOURCES.filter(s => 
-    s.name.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  const filteredSources = sources.filter((s) => s.name.toLowerCase().includes(searchQuery.toLowerCase()));
 
   return (
     <div className="bg-white border border-zinc-200 rounded-2xl shadow-sm overflow-hidden flex flex-col h-full">
@@ -44,20 +59,20 @@ export function SourceSelector() {
         <div className="flex items-center gap-3">
           <div className="relative">
             <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400" />
-            <input 
-              type="text" 
-              placeholder="Search sources..." 
+            <input
+              type="text"
+              placeholder="Search sources..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="pl-9 pr-4 py-2 bg-white border border-zinc-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-orange-500/20 transition-all w-48"
             />
           </div>
-          <button 
+          <button
             onClick={toggleAll}
             className="flex items-center gap-2 px-4 py-2 bg-zinc-900 text-white rounded-xl text-xs font-bold hover:bg-zinc-800 transition-all shadow-sm"
           >
-            {selectedIds.length === SOURCES.length ? <CheckSquare className="w-4 h-4" /> : <Square className="w-4 h-4" />}
-            {selectedIds.length === SOURCES.length ? 'Deselect All' : 'Select All'}
+            {selectedIds.length === enabledSourceIds.length ? <CheckSquare className="w-4 h-4" /> : <Square className="w-4 h-4" />}
+            {selectedIds.length === enabledSourceIds.length ? 'Deselect All' : 'Select All'}
           </button>
         </div>
       </div>
@@ -76,17 +91,17 @@ export function SourceSelector() {
           </thead>
           <tbody className="divide-y divide-zinc-100">
             {filteredSources.map((source) => (
-              <tr 
-                key={source.id} 
+              <tr
+                key={source.id}
                 className={`group hover:bg-zinc-50 transition-colors cursor-pointer ${!source.enabled && 'opacity-50'}`}
                 onClick={() => source.enabled && toggleSource(source.id)}
               >
                 <td className="px-6 py-4">
-                  <div className={`w-5 h-5 rounded border transition-all flex items-center justify-center ${
-                    selectedIds.includes(source.id) 
-                      ? 'bg-orange-600 border-orange-600 shadow-sm' 
-                      : 'border-zinc-300 group-hover:border-zinc-400'
-                  }`}>
+                  <div
+                    className={`w-5 h-5 rounded border transition-all flex items-center justify-center ${
+                      selectedIds.includes(source.id) ? 'bg-orange-600 border-orange-600 shadow-sm' : 'border-zinc-300 group-hover:border-zinc-400'
+                    }`}
+                  >
                     {selectedIds.includes(source.id) && <CheckSquare className="w-4 h-4 text-white" />}
                   </div>
                 </td>
@@ -98,15 +113,16 @@ export function SourceSelector() {
                     <div>
                       <p className="text-sm font-bold text-zinc-900">{source.name}</p>
                       {source.freeTier && <span className="text-[9px] font-black text-emerald-600 uppercase tracking-widest">Free Tier Available</span>}
+                      {source.description && <p className="text-[10px] text-zinc-500">{source.description}</p>}
                     </div>
                   </div>
                 </td>
                 <td className="px-6 py-4 text-center">
-                  <span className={`px-2 py-1 rounded-lg text-[10px] font-bold uppercase tracking-wider ${
-                    source.type === 'api' ? 'bg-blue-50 text-blue-600' : 
-                    source.type === 'scraper' ? 'bg-purple-50 text-purple-600' : 
-                    'bg-zinc-100 text-zinc-600'
-                  }`}>
+                  <span
+                    className={`px-2 py-1 rounded-lg text-[10px] font-bold uppercase tracking-wider ${
+                      source.type === 'api' ? 'bg-blue-50 text-blue-600' : source.type === 'scraper' ? 'bg-purple-50 text-purple-600' : 'bg-zinc-100 text-zinc-600'
+                    }`}
+                  >
                     {source.type}
                   </span>
                 </td>
@@ -135,9 +151,7 @@ export function SourceSelector() {
                 <td className="px-6 py-4 text-right">
                   <div className="flex items-center justify-end gap-2">
                     <span className={`w-2 h-2 rounded-full ${source.enabled ? 'bg-emerald-500' : 'bg-zinc-300'}`} />
-                    <span className="text-xs font-bold text-zinc-500 uppercase tracking-wider">
-                      {source.enabled ? 'Active' : 'Disabled'}
-                    </span>
+                    <span className="text-xs font-bold text-zinc-500 uppercase tracking-wider">{source.enabled ? 'Active' : 'Disabled'}</span>
                   </div>
                 </td>
               </tr>
@@ -149,7 +163,7 @@ export function SourceSelector() {
       <div className="p-4 bg-zinc-50 border-t border-zinc-100 flex items-center gap-3">
         <AlertCircle className="w-4 h-4 text-orange-500" />
         <p className="text-xs text-zinc-500 font-medium">
-          <span className="font-bold text-zinc-900">{selectedIds.length} sources selected.</span> Priority 1 sources will be queried first for normalization.
+          <span className="font-bold text-zinc-900">{selectedIds.length} sources selected.</span> Disabled providers are shown for roadmap visibility only.
         </p>
       </div>
     </div>

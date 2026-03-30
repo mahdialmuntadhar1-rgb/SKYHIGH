@@ -1,16 +1,18 @@
-export type BusinessStatus = 
-  | 'pending_review' 
-  | 'needs_cleaning' 
-  | 'needs_verification' 
-  | 'verified' 
-  | 'rejected' 
+export type BusinessStatus =
+  | 'pending_review'
+  | 'needs_cleaning'
+  | 'needs_verification'
+  | 'verified'
+  | 'rejected'
   | 'export_ready'
   | 'outside_central_coverage';
 
 export type SourceType = 'api' | 'scraper' | 'file';
 
+export type DiscoverySource = 'gemini' | 'osm';
+
 export interface Source {
-  id: string;
+  id: DiscoverySource | string;
   name: string;
   type: SourceType;
   freeTier: boolean;
@@ -18,43 +20,46 @@ export interface Source {
   socialSupport: boolean;
   priority: number;
   enabled: boolean;
+  description?: string;
 }
 
 export interface Business {
   id: string;
   name: string;
   local_name?: string;
-  city: string;
-  district: string;
-  city_center_zone: string;
   category: string;
+  city: string;
+  governorate?: string;
+  district?: string;
+  city_center_zone?: string;
   subcategory?: string;
+  address?: string;
   phone?: string;
   email?: string;
   website?: string;
+  facebook_url?: string;
+  instagram_url?: string;
   social_media?: {
     facebook?: string;
     instagram?: string;
     whatsapp?: string;
   };
-  address: string;
-  latitude: number;
-  longitude: number;
-  sources: string[]; // Source IDs
-  completeness_score: number; // 0-100
-  verification_score: number; // 0-100
-  duplicate_risk: number; // 0-100
-  suburb_risk: number; // 0-100
-  status: BusinessStatus;
-  created_at: string;
-  updated_at: string;
-  qc_notes?: string;
-  publish_readiness_score?: number;
+  latitude?: number;
+  longitude?: number;
   source?: string;
   source_url?: string;
   confidence_score?: number;
+  status?: BusinessStatus;
+  completeness_score?: number;
+  verification_score?: number;
+  duplicate_risk?: number;
+  suburb_risk?: number;
+  publish_readiness_score?: number;
   coverage_type?: string;
   raw_data?: any;
+  created_at: string;
+  updated_at?: string;
+  qc_notes?: string;
 }
 
 export interface CityConfig {
@@ -70,8 +75,6 @@ export interface AdminCityConfig {
   approved_central_districts: string[];
   approved_central_zones: string[];
 }
-
-export type DiscoverySource = 'gemini' | 'web_directory' | 'facebook' | 'instagram' | 'google_maps' | 'foursquare' | 'custom_file';
 
 export interface DiscoveryResult {
   summary: string;

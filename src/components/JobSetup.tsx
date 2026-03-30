@@ -1,22 +1,22 @@
-import React, { useState } from 'react';
-import { 
-  MapPin, 
-  Search, 
-  Filter, 
-  Zap, 
-  ShieldCheck, 
-  AlertTriangle, 
-  ChevronDown,
-  Layers,
-  Settings2,
-  Play
-} from 'lucide-react';
+import React, { useMemo, useState } from 'react';
+import { MapPin, Search, Filter, Zap, ShieldCheck, AlertTriangle, ChevronDown, Layers, Settings2, Play, Loader2, CheckCircle2 } from 'lucide-react';
 import { IRAQ_CITIES, CATEGORIES } from '../constants';
+import { DiscoveryResult, DiscoverySource } from '../types';
 
-export function JobSetup() {
+interface JobSetupProps {
+  selectedSources: DiscoverySource[];
+  onRunSuccess: (result: DiscoveryResult) => void;
+}
+
+export function JobSetup({ selectedSources, onRunSuccess }: JobSetupProps) {
   const [selectedCity, setSelectedCity] = useState(IRAQ_CITIES[0]);
   const [selectedDistrict, setSelectedDistrict] = useState(IRAQ_CITIES[0].districts[0]);
   const [selectedZone, setSelectedZone] = useState(IRAQ_CITIES[0].districts[0].central_zones[0]);
+  const [selectedCategory, setSelectedCategory] = useState(CATEGORIES[0]);
+  const [keyword, setKeyword] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [result, setResult] = useState<DiscoveryResult | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
   const [toggles, setToggles] = useState({
     freeTierOnly: false,
@@ -28,7 +28,49 @@ export function JobSetup() {
   });
 
   const handleToggle = (key: keyof typeof toggles) => {
-    setToggles(prev => ({ ...prev, [key]: !prev[key] }));
+    setToggles((prev) => ({ ...prev, [key]: !prev[key] }));
+  };
+
+  const cityForRun = useMemo(() => {
+    if (toggles.centralCityOnly) {
+      return `${selectedCity.name} - ${selectedZone}`;
+    }
+    return selectedCity.name;
+  }, [selectedCity.name, selectedZone, toggles.centralCityOnly]);
+
+  const handleRun = async () => {
+    if (selectedSources.length === 0) {
+      setError('Please select at least one active source.');
+      return;
+    }
+
+    setLoading(true);
+    setError(null);
+    setResult(null);
+
+    try {
+      const response = await fetch('/api/run', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          city: cityForRun,
+          category: keyword.trim() || selectedCategory,
+          sources: selectedSources
+        })
+      });
+
+      const payload = await response.json();
+      if (!response.ok) {
+        throw new Error(payload.error || 'Collection request failed');
+      }
+
+      setResult(payload);
+      onRunSuccess(payload);
+    } catch (err: any) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -38,14 +80,17 @@ export function JobSetup() {
           <h2 className="text-lg font-bold tracking-tight text-zinc-900">Job Setup</h2>
           <p className="text-xs text-zinc-500 font-medium uppercase tracking-wider">Configure collection parameters</p>
         </div>
-        <button className="flex items-center gap-2 px-6 py-2.5 bg-orange-600 text-white rounded-xl text-sm font-bold hover:bg-orange-500 transition-all shadow-lg shadow-orange-600/20 active:scale-95">
-          <Play className="w-4 h-4 fill-white" />
-          Start Collection
+        <button
+          onClick={handleRun}
+          disabled={loading || selectedSources.length === 0}
+          className="flex items-center gap-2 px-6 py-2.5 bg-orange-600 text-white rounded-xl text-sm font-bold hover:bg-orange-500 transition-all shadow-lg shadow-orange-600/20 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Play className="w-4 h-4 fill-white" />}
+          {loading ? 'Collecting...' : 'Start Collection'}
         </button>
       </div>
 
       <div className="flex-1 overflow-y-auto p-6 space-y-8">
-        {/* Geo Targeting */}
         <section className="space-y-4">
           <div className="flex items-center gap-2 text-zinc-400">
             <MapPin className="w-4 h-4" />
@@ -55,17 +100,21 @@ export function JobSetup() {
             <div className="space-y-1.5">
               <label className="text-xs font-bold text-zinc-500 ml-1">City</label>
               <div className="relative">
-                <select 
+                <select
                   value={selectedCity.name}
                   onChange={(e) => {
-                    const city = IRAQ_CITIES.find(c => c.name === e.target.value)!;
+                    const city = IRAQ_CITIES.find((c) => c.name === e.target.value)!;
                     setSelectedCity(city);
                     setSelectedDistrict(city.districts[0]);
                     setSelectedZone(city.districts[0].central_zones[0]);
                   }}
                   className="w-full bg-zinc-50 border border-zinc-200 rounded-xl px-4 py-2.5 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-orange-500/20 appearance-none"
                 >
-                  {IRAQ_CITIES.map(city => <option key={city.name} value={city.name}>{city.name}</option>)}
+                  {IRAQ_CITIES.map((city) => (
+                    <option key={city.name} value={city.name}>
+                      {city.name}
+                    </option>
+                  ))}
                 </select>
                 <ChevronDown className="w-4 h-4 absolute right-3 top-1/2 -translate-y-1/2 text-zinc-400 pointer-events-none" />
               </div>
@@ -73,16 +122,20 @@ export function JobSetup() {
             <div className="space-y-1.5">
               <label className="text-xs font-bold text-zinc-500 ml-1">District</label>
               <div className="relative">
-                <select 
+                <select
                   value={selectedDistrict.name}
                   onChange={(e) => {
-                    const district = selectedCity.districts.find(d => d.name === e.target.value)!;
+                    const district = selectedCity.districts.find((d) => d.name === e.target.value)!;
                     setSelectedDistrict(district);
                     setSelectedZone(district.central_zones[0]);
                   }}
                   className="w-full bg-zinc-50 border border-zinc-200 rounded-xl px-4 py-2.5 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-orange-500/20 appearance-none"
                 >
-                  {selectedCity.districts.map(d => <option key={d.name} value={d.name}>{d.name}</option>)}
+                  {selectedCity.districts.map((d) => (
+                    <option key={d.name} value={d.name}>
+                      {d.name}
+                    </option>
+                  ))}
                 </select>
                 <ChevronDown className="w-4 h-4 absolute right-3 top-1/2 -translate-y-1/2 text-zinc-400 pointer-events-none" />
               </div>
@@ -90,12 +143,16 @@ export function JobSetup() {
             <div className="space-y-1.5">
               <label className="text-xs font-bold text-zinc-500 ml-1">Central Zone</label>
               <div className="relative">
-                <select 
+                <select
                   value={selectedZone}
                   onChange={(e) => setSelectedZone(e.target.value)}
                   className="w-full bg-zinc-50 border border-zinc-200 rounded-xl px-4 py-2.5 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-orange-500/20 appearance-none"
                 >
-                  {selectedDistrict.central_zones.map(z => <option key={z} value={z}>{z}</option>)}
+                  {selectedDistrict.central_zones.map((z) => (
+                    <option key={z} value={z}>
+                      {z}
+                    </option>
+                  ))}
                 </select>
                 <ChevronDown className="w-4 h-4 absolute right-3 top-1/2 -translate-y-1/2 text-zinc-400 pointer-events-none" />
               </div>
@@ -103,7 +160,6 @@ export function JobSetup() {
           </div>
         </section>
 
-        {/* Category & Keywords */}
         <section className="space-y-4">
           <div className="flex items-center gap-2 text-zinc-400">
             <Filter className="w-4 h-4" />
@@ -113,8 +169,16 @@ export function JobSetup() {
             <div className="space-y-1.5">
               <label className="text-xs font-bold text-zinc-500 ml-1">Main Category</label>
               <div className="relative">
-                <select className="w-full bg-zinc-50 border border-zinc-200 rounded-xl px-4 py-2.5 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-orange-500/20 appearance-none">
-                  {CATEGORIES.map(cat => <option key={cat} value={cat}>{cat}</option>)}
+                <select
+                  value={selectedCategory}
+                  onChange={(e) => setSelectedCategory(e.target.value)}
+                  className="w-full bg-zinc-50 border border-zinc-200 rounded-xl px-4 py-2.5 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-orange-500/20 appearance-none"
+                >
+                  {CATEGORIES.map((cat) => (
+                    <option key={cat} value={cat}>
+                      {cat}
+                    </option>
+                  ))}
                 </select>
                 <ChevronDown className="w-4 h-4 absolute right-3 top-1/2 -translate-y-1/2 text-zinc-400 pointer-events-none" />
               </div>
@@ -123,9 +187,11 @@ export function JobSetup() {
               <label className="text-xs font-bold text-zinc-500 ml-1">Keyword Search</label>
               <div className="relative">
                 <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400" />
-                <input 
-                  type="text" 
-                  placeholder="e.g. 'Coffee Shop', 'Pharmacy'..." 
+                <input
+                  type="text"
+                  value={keyword}
+                  onChange={(e) => setKeyword(e.target.value)}
+                  placeholder="e.g. 'Coffee Shop', 'Pharmacy'..."
                   className="w-full bg-zinc-50 border border-zinc-200 rounded-xl pl-9 pr-4 py-2.5 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-orange-500/20"
                 />
               </div>
@@ -133,7 +199,6 @@ export function JobSetup() {
           </div>
         </section>
 
-        {/* Collection Parameters */}
         <section className="space-y-4">
           <div className="flex items-center gap-2 text-zinc-400">
             <Settings2 className="w-4 h-4" />
@@ -157,7 +222,6 @@ export function JobSetup() {
           </div>
         </section>
 
-        {/* Smart Toggles */}
         <section className="space-y-4">
           <div className="flex items-center gap-2 text-zinc-400">
             <Zap className="w-4 h-4" />
@@ -170,32 +234,46 @@ export function JobSetup() {
               { id: 'enrichmentMode', label: 'Enrichment Mode', icon: ShieldCheck },
               { id: 'mapPoiOnly', label: 'Map/POI Only', icon: MapPin },
               { id: 'centralCityOnly', label: 'Central City Only', icon: ShieldCheck },
-              { id: 'rejectSuburbs', label: 'Reject Suburbs Automatically', icon: AlertTriangle },
+              { id: 'rejectSuburbs', label: 'Reject Suburbs Automatically', icon: AlertTriangle }
             ].map((toggle) => (
-              <button 
+              <button
                 key={toggle.id}
                 onClick={() => handleToggle(toggle.id as any)}
                 className={`flex items-center justify-between p-3 rounded-xl border transition-all ${
-                  toggles[toggle.id as keyof typeof toggles] 
-                    ? 'bg-orange-50 border-orange-200 text-orange-900' 
-                    : 'bg-white border-zinc-100 text-zinc-500 hover:border-zinc-200'
+                  toggles[toggle.id as keyof typeof toggles] ? 'bg-orange-50 border-orange-200 text-orange-900' : 'bg-white border-zinc-100 text-zinc-500 hover:border-zinc-200'
                 }`}
               >
                 <div className="flex items-center gap-3">
                   <toggle.icon className={`w-4 h-4 ${toggles[toggle.id as keyof typeof toggles] ? 'text-orange-600' : 'text-zinc-400'}`} />
                   <span className="text-xs font-bold">{toggle.label}</span>
                 </div>
-                <div className={`w-8 h-4 rounded-full relative transition-colors ${
-                  toggles[toggle.id as keyof typeof toggles] ? 'bg-orange-600' : 'bg-zinc-200'
-                }`}>
-                  <div className={`absolute top-0.5 w-3 h-3 bg-white rounded-full transition-all ${
-                    toggles[toggle.id as keyof typeof toggles] ? 'left-4.5' : 'left-0.5'
-                  }`} />
+                <div className={`w-8 h-4 rounded-full relative transition-colors ${toggles[toggle.id as keyof typeof toggles] ? 'bg-orange-600' : 'bg-zinc-200'}`}>
+                  <div className={`absolute top-0.5 w-3 h-3 bg-white rounded-full transition-all ${toggles[toggle.id as keyof typeof toggles] ? 'left-4.5' : 'left-0.5'}`} />
                 </div>
               </button>
             ))}
           </div>
         </section>
+
+        {error && <div className="p-3 rounded-xl border border-red-100 bg-red-50 text-red-700 text-sm">{error}</div>}
+
+        {result && (
+          <div className="p-4 rounded-xl border border-emerald-100 bg-emerald-50 text-emerald-900 space-y-2">
+            <div className="flex items-center gap-2 text-sm font-semibold">
+              <CheckCircle2 className="w-4 h-4" />
+              Collection complete
+            </div>
+            <div className="text-xs">Inserted: {result.insertedCount}</div>
+            <div className="text-xs">Skipped: {result.skippedCount}</div>
+            {result.errors.length > 0 && (
+              <ul className="text-xs text-red-700 list-disc pl-4">
+                {result.errors.map((item, idx) => (
+                  <li key={`${item}-${idx}`}>{item}</li>
+                ))}
+              </ul>
+            )}
+          </div>
+        )}
       </div>
     </div>
   );

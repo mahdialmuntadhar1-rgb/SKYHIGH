@@ -4,7 +4,7 @@ import { DiscoveryAdapter } from "./base";
 
 export class GeminiAdapter implements DiscoveryAdapter {
   id = 'gemini' as const;
-  name = 'Gemini Research';
+  name = 'Gemini Research (LLM-assisted)';
 
   async discover(city: string, category: string): Promise<Partial<Business>[]> {
     const apiKey = process.env.GEMINI_API_KEY;
@@ -54,7 +54,7 @@ export class GeminiAdapter implements DiscoveryAdapter {
         city,
         source: 'gemini',
         source_url: 'https://gemini.google.com',
-        confidence_score: b.confidence_score || 0.8
+        confidence_score: b.confidence_score || 0.65
       }));
     } catch (error) {
       console.error("Gemini discovery error:", error);
