@@ -181,6 +181,8 @@ export function ReviewQueue() {
           </div>
         </div>
 
+
+      <div className="bg-amber-50 border border-amber-200 text-amber-800 rounded-xl px-4 py-3 text-sm font-medium">Demo mode: review queue is currently using seeded mock records; live moderation wiring is pending.</div>
         {/* Filters Bar */}
         <div className="bg-white border border-zinc-200 p-4 rounded-2xl shadow-sm flex flex-wrap items-center gap-4">
           <div className="flex-1 min-w-[200px] relative">
