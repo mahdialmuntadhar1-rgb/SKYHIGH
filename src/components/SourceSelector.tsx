@@ -1,37 +1,41 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { 
   CheckSquare, 
   Square, 
   Zap, 
   Users, 
   Layers, 
-  Settings2, 
   Search,
   AlertCircle
 } from 'lucide-react';
 import { SOURCES } from '../constants';
-import { Source } from '../types';
+import { DiscoverySource } from '../types';
 
-export function SourceSelector() {
-  const [selectedIds, setSelectedIds] = useState<string[]>(SOURCES.filter(s => s.enabled).map(s => s.id));
+interface SourceSelectorProps {
+  selectedIds: DiscoverySource[];
+  onChange: (sources: DiscoverySource[]) => void;
+}
+
+const ACTIVE_SOURCE_IDS = SOURCES.filter((source) => source.enabled).map((source) => source.id as DiscoverySource);
+
+export function SourceSelector({ selectedIds, onChange }: SourceSelectorProps) {
   const [searchQuery, setSearchQuery] = useState('');
 
   const toggleAll = () => {
-    if (selectedIds.length === SOURCES.length) {
-      setSelectedIds([]);
+    if (selectedIds.length === ACTIVE_SOURCE_IDS.length) {
+      onChange([]);
     } else {
-      setSelectedIds(SOURCES.map(s => s.id));
+      onChange(ACTIVE_SOURCE_IDS);
     }
   };
 
-  const toggleSource = (id: string) => {
-    setSelectedIds(prev => 
-      prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]
-    );
+  const toggleSource = (id: DiscoverySource) => {
+    onChange(selectedIds.includes(id) ? selectedIds.filter((sourceId) => sourceId !== id) : [...selectedIds, id]);
   };
 
-  const filteredSources = SOURCES.filter(s => 
-    s.name.toLowerCase().includes(searchQuery.toLowerCase())
+  const filteredSources = useMemo(
+    () => SOURCES.filter((source) => source.name.toLowerCase().includes(searchQuery.toLowerCase())),
+    [searchQuery]
   );
 
   return (
@@ -56,8 +60,8 @@ export function SourceSelector() {
             onClick={toggleAll}
             className="flex items-center gap-2 px-4 py-2 bg-zinc-900 text-white rounded-xl text-xs font-bold hover:bg-zinc-800 transition-all shadow-sm"
           >
-            {selectedIds.length === SOURCES.length ? <CheckSquare className="w-4 h-4" /> : <Square className="w-4 h-4" />}
-            {selectedIds.length === SOURCES.length ? 'Deselect All' : 'Select All'}
+            {selectedIds.length === ACTIVE_SOURCE_IDS.length ? <CheckSquare className="w-4 h-4" /> : <Square className="w-4 h-4" />}
+            {selectedIds.length === ACTIVE_SOURCE_IDS.length ? 'Deselect All' : 'Select All'}
           </button>
         </div>
       </div>
@@ -79,15 +83,15 @@ export function SourceSelector() {
               <tr 
                 key={source.id} 
                 className={`group hover:bg-zinc-50 transition-colors cursor-pointer ${!source.enabled && 'opacity-50'}`}
-                onClick={() => source.enabled && toggleSource(source.id)}
+                onClick={() => source.enabled && toggleSource(source.id as DiscoverySource)}
               >
                 <td className="px-6 py-4">
                   <div className={`w-5 h-5 rounded border transition-all flex items-center justify-center ${
-                    selectedIds.includes(source.id) 
+                    selectedIds.includes(source.id as DiscoverySource) 
                       ? 'bg-orange-600 border-orange-600 shadow-sm' 
                       : 'border-zinc-300 group-hover:border-zinc-400'
                   }`}>
-                    {selectedIds.includes(source.id) && <CheckSquare className="w-4 h-4 text-white" />}
+                    {selectedIds.includes(source.id as DiscoverySource) && <CheckSquare className="w-4 h-4 text-white" />}
                   </div>
                 </td>
                 <td className="px-6 py-4">
@@ -149,7 +153,7 @@ export function SourceSelector() {
       <div className="p-4 bg-zinc-50 border-t border-zinc-100 flex items-center gap-3">
         <AlertCircle className="w-4 h-4 text-orange-500" />
         <p className="text-xs text-zinc-500 font-medium">
-          <span className="font-bold text-zinc-900">{selectedIds.length} sources selected.</span> Priority 1 sources will be queried first for normalization.
+          <span className="font-bold text-zinc-900">{selectedIds.length} sources selected.</span> Only active integrations are runnable via the backend.
         </p>
       </div>
     </div>

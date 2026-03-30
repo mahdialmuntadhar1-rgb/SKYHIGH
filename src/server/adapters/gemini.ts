@@ -48,13 +48,13 @@ export class GeminiAdapter implements DiscoveryAdapter {
 
       const businesses: any[] = JSON.parse(response.text || "[]");
       
-      return businesses.map(b => ({
+      return businesses.filter((b) => Boolean(b?.name)).map(b => ({
         ...b,
         category,
         city,
         source: 'gemini',
         source_url: 'https://gemini.google.com',
-        confidence_score: b.confidence_score || 0.8
+        confidence_score: b.confidence_score || 0.65
       }));
     } catch (error) {
       console.error("Gemini discovery error:", error);
