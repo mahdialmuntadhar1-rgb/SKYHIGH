@@ -19,7 +19,10 @@ import {
   Trash2,
   CheckSquare,
   Square,
-  Clock
+  Clock,
+  ShieldCheck,
+  Award,
+  Sparkles
 } from 'lucide-react';
 import { Business, BusinessStatus } from '../../types';
 
@@ -98,6 +101,9 @@ const statusConfig: Record<BusinessStatus, { label: string, color: string, icon:
   rejected: { label: 'Rejected', color: 'bg-red-100 text-red-700 border-red-200', icon: XCircle },
   export_ready: { label: 'Export Ready', color: 'bg-indigo-100 text-indigo-700 border-indigo-200', icon: CheckSquare },
   outside_central_coverage: { label: 'Outside Central', color: 'bg-rose-100 text-rose-700 border-rose-200', icon: MapPin },
+  claimed_verified: { label: 'Claimed', color: 'bg-purple-100 text-purple-700 border-purple-200', icon: ShieldCheck },
+  registry_verified: { label: 'Registry', color: 'bg-cyan-100 text-cyan-700 border-cyan-200', icon: Award },
+  high_confidence_match: { label: 'High Confidence', color: 'bg-lime-100 text-lime-700 border-lime-200', icon: Sparkles },
 };
 
 function ClockIcon(props: any) {

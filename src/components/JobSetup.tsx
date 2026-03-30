@@ -10,18 +10,46 @@ import {
   Layers,
   Settings2,
   Play,
-  Square
+  Square,
+  Globe,
+  Sparkles,
+  FileCheck,
+  CheckCircle2,
+  Facebook,
+  Instagram,
+  Send,
+  CheckSquare,
+  Square as SquareIcon
 } from 'lucide-react';
 import { motion } from 'motion/react';
-import { IRAQ_CITIES, CATEGORIES } from '../constants';
+import { IRAQ_CITIES, CATEGORIES, DISCOVERY_SOURCES } from '../constants';
+import { DiscoverySource } from '../types';
+
+const iconMap: Record<string, any> = {
+  MapPin,
+  Layers,
+  ShieldCheck,
+  Globe,
+  Sparkles,
+  FileCheck,
+  Facebook,
+  Instagram,
+  Send
+};
 
 export function JobSetup() {
   const [selectedCity, setSelectedCity] = useState(IRAQ_CITIES[0]);
   const [selectedDistrict, setSelectedDistrict] = useState(IRAQ_CITIES[0].districts[0]);
   const [selectedZone, setSelectedZone] = useState(IRAQ_CITIES[0].districts[0].central_zones[0]);
+  const [selectedCategory, setSelectedCategory] = useState(CATEGORIES[0]);
+  const [keyword, setKeyword] = useState('');
+  const [selectedSources, setSelectedSources] = useState<DiscoverySource[]>(
+    DISCOVERY_SOURCES.filter(s => s.defaultChecked).map(s => s.id)
+  );
 
   const [isRunning, setIsRunning] = useState(false);
   const [progress, setProgress] = useState(0);
+  const [lastResult, setLastResult] = useState<any>(null);
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
 
   const [toggles, setToggles] = useState({
@@ -32,6 +60,22 @@ export function JobSetup() {
     centralCityOnly: true,
     rejectSuburbs: true
   });
+
+  const handleToggleSource = (sourceId: DiscoverySource) => {
+    setSelectedSources(prev => 
+      prev.includes(sourceId) 
+        ? prev.filter(id => id !== sourceId) 
+        : [...prev, sourceId]
+    );
+  };
+
+  const handleSelectAllSources = () => {
+    if (selectedSources.length === DISCOVERY_SOURCES.length) {
+      setSelectedSources([]);
+    } else {
+      setSelectedSources(DISCOVERY_SOURCES.map(s => s.id));
+    }
+  };
 
   const handleToggle = (key: keyof typeof toggles) => {
     setToggles(prev => ({ ...prev, [key]: !prev[key] }));
@@ -45,18 +89,43 @@ export function JobSetup() {
     }
   };
 
-  const startJob = () => {
+  const startJob = async () => {
+    if (selectedSources.length === 0) {
+      alert('Please select at least one data source.');
+      return;
+    }
+
     setIsRunning(true);
     setProgress(0);
+    setLastResult(null);
+
+    // Mock progress while waiting for API
     intervalRef.current = setInterval(() => {
-      setProgress(prev => {
-        if (prev >= 100) {
-          stopJob();
-          return 100;
-        }
-        return prev + 1;
+      setProgress(prev => (prev < 90 ? prev + 2 : prev));
+    }, 200);
+
+    try {
+      const response = await fetch('/api/run', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          city: selectedCity.name,
+          category: selectedCategory,
+          sources: selectedSources
+        })
       });
-    }, 100);
+
+      if (!response.ok) throw new Error('Failed to run discovery job');
+      
+      const result = await response.json();
+      setLastResult(result);
+      setProgress(100);
+      setTimeout(() => stopJob(), 1000);
+    } catch (error: any) {
+      console.error('Job execution error:', error);
+      alert(`Error: ${error.message}`);
+      stopJob();
+    }
   };
 
   const stopJob = () => {
@@ -120,6 +189,35 @@ export function JobSetup() {
             />
           </div>
         </div>
+      )}
+
+      {!isRunning && lastResult && (
+        <motion.div 
+          initial={{ opacity: 0, height: 0 }}
+          animate={{ opacity: 1, height: 'auto' }}
+          className="px-6 py-4 bg-emerald-50 border-b border-emerald-100 space-y-3"
+        >
+          <div className="flex items-center gap-2 text-emerald-700">
+            <CheckCircle2 className="w-4 h-4" />
+            <h4 className="text-xs font-bold uppercase tracking-wider">Job Completed</h4>
+          </div>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <div className="space-y-0.5">
+              <p className="text-[10px] font-bold text-emerald-600 uppercase">Inserted</p>
+              <p className="text-lg font-black text-emerald-900">{lastResult.insertedCount}</p>
+            </div>
+            <div className="space-y-0.5">
+              <p className="text-[10px] font-bold text-emerald-600 uppercase">Skipped</p>
+              <p className="text-lg font-black text-emerald-900">{lastResult.skippedCount}</p>
+            </div>
+            {lastResult.sourceStats && Object.entries(lastResult.sourceStats).map(([source, stats]: [string, any]) => (
+              <div key={source} className="space-y-0.5">
+                <p className="text-[10px] font-bold text-emerald-600 uppercase">{source}</p>
+                <p className="text-xs font-bold text-emerald-800">+{stats.inserted} / {stats.found}</p>
+              </div>
+            ))}
+          </div>
+        </motion.div>
       )}
 
       <div className="flex-1 overflow-y-auto p-6 space-y-8">
@@ -191,7 +289,11 @@ export function JobSetup() {
             <div className="space-y-1.5">
               <label className="text-xs font-bold text-zinc-500 ml-1">Main Category</label>
               <div className="relative">
-                <select className="w-full bg-zinc-50 border border-zinc-200 rounded-xl px-4 py-2.5 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-orange-500/20 appearance-none">
+                <select 
+                  value={selectedCategory}
+                  onChange={(e) => setSelectedCategory(e.target.value)}
+                  className="w-full bg-zinc-50 border border-zinc-200 rounded-xl px-4 py-2.5 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-orange-500/20 appearance-none"
+                >
                   {CATEGORIES.map(cat => <option key={cat} value={cat}>{cat}</option>)}
                 </select>
                 <ChevronDown className="w-4 h-4 absolute right-3 top-1/2 -translate-y-1/2 text-zinc-400 pointer-events-none" />
@@ -203,6 +305,8 @@ export function JobSetup() {
                 <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400" />
                 <input 
                   type="text" 
+                  value={keyword}
+                  onChange={(e) => setKeyword(e.target.value)}
                   placeholder="e.g. 'Coffee Shop', 'Pharmacy'..." 
                   className="w-full bg-zinc-50 border border-zinc-200 rounded-xl pl-9 pr-4 py-2.5 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-orange-500/20"
                 />
@@ -232,6 +336,80 @@ export function JobSetup() {
               </div>
               <input type="range" min="50" max="100" defaultValue="85" className="w-full h-1.5 bg-zinc-100 rounded-lg appearance-none cursor-pointer accent-orange-600" />
             </div>
+          </div>
+        </section>
+
+        {/* Data Sources */}
+        <section className="space-y-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2 text-zinc-400">
+              <Globe className="w-4 h-4" />
+              <h3 className="text-[10px] font-bold uppercase tracking-widest">Data Sources</h3>
+            </div>
+            <button 
+              onClick={handleSelectAllSources}
+              className="text-[10px] font-bold text-orange-600 uppercase tracking-widest hover:text-orange-700 transition-colors"
+            >
+              {selectedSources.length === DISCOVERY_SOURCES.length ? 'Deselect All' : 'Select All'}
+            </button>
+          </div>
+          <div className="grid grid-cols-1 gap-3">
+            {DISCOVERY_SOURCES.map((source) => {
+              const Icon = iconMap[source.icon] || Globe;
+              const isSelected = selectedSources.includes(source.id);
+              
+              return (
+                <div 
+                  key={source.id}
+                  onClick={() => handleToggleSource(source.id)}
+                  className={`group relative flex items-start gap-4 p-4 rounded-2xl border transition-all cursor-pointer ${
+                    isSelected 
+                      ? 'bg-orange-50/50 border-orange-200 ring-1 ring-orange-200' 
+                      : 'bg-white border-zinc-100 hover:border-zinc-200'
+                  }`}
+                >
+                  <div className={`mt-1 shrink-0 w-5 h-5 rounded border flex items-center justify-center transition-colors ${
+                    isSelected ? 'bg-orange-600 border-orange-600' : 'bg-zinc-50 border-zinc-200 group-hover:border-zinc-300'
+                  }`}>
+                    {isSelected && <CheckSquare className="w-3.5 h-3.5 text-white" />}
+                  </div>
+                  
+                  <div className="flex-1 space-y-1">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <Icon className={`w-4 h-4 ${isSelected ? 'text-orange-600' : 'text-zinc-400'}`} />
+                        <span className={`text-sm font-bold ${isSelected ? 'text-zinc-900' : 'text-zinc-600'}`}>
+                          {source.label}
+                        </span>
+                      </div>
+                      <div className="flex gap-1.5">
+                        {source.tags.map(tag => (
+                          <span 
+                            key={tag} 
+                            className={`text-[9px] font-black uppercase tracking-tighter px-1.5 py-0.5 rounded-md ${
+                              tag === 'Paid' ? 'bg-red-100 text-red-700' :
+                              tag === 'Free' ? 'bg-emerald-100 text-emerald-700' :
+                              tag === 'Verification' ? 'bg-blue-100 text-blue-700' :
+                              'bg-zinc-100 text-zinc-600'
+                            }`}
+                          >
+                            {tag}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                    <p className="text-xs text-zinc-500 leading-relaxed">
+                      {source.description}
+                    </p>
+                    {source.hint && (
+                      <p className="text-[10px] text-orange-600/70 font-medium italic">
+                        {source.hint}
+                      </p>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
           </div>
         </section>
 

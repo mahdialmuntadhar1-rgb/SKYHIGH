@@ -1,62 +1,124 @@
 import { Business, DiscoveryRequest, DiscoveryResult } from '../types';
 import { GeminiAdapter } from './adapters/gemini';
 import { WebDirectoryAdapter } from './adapters/web';
+import { OSMAdapter } from './adapters/osm';
+import { OvertureAdapter } from './adapters/overture';
+import { FoursquareAdapter } from './adapters/foursquare';
 import { supabase } from './supabase';
 
 const adapters = [
   new GeminiAdapter(),
-  new WebDirectoryAdapter()
+  new WebDirectoryAdapter(),
+  new OSMAdapter(),
+  new OvertureAdapter(),
+  new FoursquareAdapter()
 ];
+
+// Simple normalization helpers
+function normalizePhone(phone?: string): string | undefined {
+  if (!phone) return undefined;
+  // Remove all non-digits except +
+  return phone.replace(/[^\d+]/g, '');
+}
+
+function normalizeUrl(url?: string): string | undefined {
+  if (!url) return undefined;
+  return url.toLowerCase().trim().replace(/\/$/, '');
+}
 
 export async function runDiscovery(req: DiscoveryRequest): Promise<DiscoveryResult> {
   const { city, category, sources } = req;
   const results: Partial<Business>[] = [];
   const errors: string[] = [];
+  const sourceStats: DiscoveryResult['sourceStats'] = {};
 
+  // 1. Run selected adapters
   for (const sourceId of sources) {
     const adapter = adapters.find(a => a.id === sourceId);
     if (adapter) {
+      sourceStats[sourceId] = { found: 0, inserted: 0, skipped: 0 };
       try {
         const found = await adapter.discover(city, category);
+        sourceStats[sourceId].found = found.length;
         results.push(...found);
       } catch (err: any) {
         errors.push(`${sourceId}: ${err.message}`);
+        sourceStats[sourceId].error = err.message;
       }
     }
   }
 
-  let insertedCount = 0;
-  let skippedCount = 0;
+  let totalInserted = 0;
+  let totalSkipped = 0;
 
+  // 2. Process results (Cleaning & Deduplication)
   for (const biz of results) {
-    // Simple deduplication check
+    const sourceId = biz.source || 'unknown';
+    if (!sourceStats[sourceId]) {
+      sourceStats[sourceId] = { found: 0, inserted: 0, skipped: 0 };
+    }
+
+    // Normalize data
+    const normalizedPhone = normalizePhone(biz.phone);
+    const normalizedWebsite = normalizeUrl(biz.website);
+    
+    // Simple deduplication check: name + city OR phone + city
     const { data: existing } = await supabase
       .from('businesses')
-      .select('id')
-      .or(`name.eq."${biz.name}",phone.eq."${biz.phone || ''}"`)
+      .select('id, sources, raw_data, confidence_score')
       .eq('city', biz.city)
+      .or(`name.eq."${biz.name}",phone.eq."${normalizedPhone || 'NONE'}"`)
       .maybeSingle();
 
     if (existing) {
-      skippedCount++;
+      // Merge logic: Update existing record with new source info
+      const updatedSources = Array.from(new Set([...(existing.sources || []), sourceId]));
+      
+      await supabase
+        .from('businesses')
+        .update({
+          sources: updatedSources,
+          // Update confidence if new source is higher
+          confidence_score: Math.max(existing.confidence_score || 0, biz.confidence_score || 0),
+          // Merge raw data
+          raw_data: { ...(existing.raw_data || {}), [sourceId]: biz.raw_data || biz }
+        })
+        .eq('id', existing.id);
+
+      totalSkipped++;
+      sourceStats[sourceId].skipped++;
       continue;
     }
 
+    // 3. Insert new record
+    const newBiz = {
+      ...biz,
+      phone: normalizedPhone,
+      website: normalizedWebsite,
+      sources: [sourceId],
+      status: biz.status || 'pending_review',
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+      raw_data: { [sourceId]: biz.raw_data || biz }
+    };
+
     const { error } = await supabase
       .from('businesses')
-      .insert(biz);
+      .insert(newBiz);
 
     if (error) {
       errors.push(`Insert error for ${biz.name}: ${error.message}`);
     } else {
-      insertedCount++;
+      totalInserted++;
+      sourceStats[sourceId].inserted++;
     }
   }
 
   return {
     summary: `Discovery completed for ${category} in ${city}.`,
-    insertedCount,
-    skippedCount,
-    errors
+    insertedCount: totalInserted,
+    skippedCount: totalSkipped,
+    errors,
+    sourceStats
   };
 }

@@ -5,7 +5,10 @@ export type BusinessStatus =
   | 'verified' 
   | 'rejected' 
   | 'export_ready'
-  | 'outside_central_coverage';
+  | 'outside_central_coverage'
+  | 'claimed_verified'
+  | 'registry_verified'
+  | 'high_confidence_match';
 
 export type SourceType = 'api' | 'scraper' | 'file';
 
@@ -71,13 +74,42 @@ export interface AdminCityConfig {
   approved_central_zones: string[];
 }
 
-export type DiscoverySource = 'gemini' | 'web_directory' | 'facebook' | 'instagram' | 'google_maps' | 'foursquare' | 'custom_file';
+export type DiscoverySource = 
+  | 'osm' 
+  | 'overture' 
+  | 'foursquare' 
+  | 'web_directory' 
+  | 'gemini' 
+  | 'iraqi_registry' 
+  | 'krd_registry' 
+  | 'facebook' 
+  | 'instagram' 
+  | 'telegram' 
+  | 'custom_file';
+
+export interface DiscoverySourceConfig {
+  id: DiscoverySource;
+  label: string;
+  description: string;
+  hint?: string;
+  tags: string[];
+  icon: string;
+  defaultChecked?: boolean;
+}
 
 export interface DiscoveryResult {
   summary: string;
   insertedCount: number;
   skippedCount: number;
   errors: string[];
+  sourceStats?: {
+    [sourceId: string]: {
+      found: number;
+      inserted: number;
+      skipped: number;
+      error?: string;
+    }
+  };
 }
 
 export interface DiscoveryRequest {

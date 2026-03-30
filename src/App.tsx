@@ -45,6 +45,7 @@ export default function App() {
   const renderContent = () => {
     switch (activeTab) {
       case 'dashboard':
+      case 'analytics':
         return (
           <motion.div 
             initial={{ opacity: 0, y: 20 }}

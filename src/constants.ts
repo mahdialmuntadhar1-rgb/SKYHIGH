@@ -1,4 +1,4 @@
-import { CityConfig, Source } from './types';
+import { CityConfig, Source, DiscoverySourceConfig } from './types';
 
 export const IRAQ_CITIES: CityConfig[] = [
   {
@@ -51,6 +51,92 @@ export const SOURCES: Source[] = [
   { id: 'csv', name: 'CSV Upload', type: 'file', freeTier: true, bulkSupport: true, socialSupport: true, priority: 1, enabled: true },
   { id: 'xlsx', name: 'XLSX Upload', type: 'file', freeTier: true, bulkSupport: true, socialSupport: true, priority: 2, enabled: true },
   { id: 'json', name: 'JSON Upload', type: 'file', freeTier: true, bulkSupport: true, socialSupport: true, priority: 3, enabled: true },
+];
+
+export const DISCOVERY_SOURCES: DiscoverySourceConfig[] = [
+  {
+    id: 'osm',
+    label: 'OpenStreetMap / Overpass',
+    description: 'Free business discovery, map-based search, and local place coverage.',
+    hint: 'Best free open-source source for Iraq discovery.',
+    tags: ['Free', 'Open Source', 'Discovery'],
+    icon: 'MapPin',
+    defaultChecked: true
+  },
+  {
+    id: 'overture',
+    label: 'Overture Maps',
+    description: 'Large-scale base dataset, place discovery, and confidence-based matching.',
+    hint: 'Best for large-scale base place dataset.',
+    tags: ['Open Data', 'Large-scale', 'Discovery'],
+    icon: 'Layers',
+    defaultChecked: true
+  },
+  {
+    id: 'foursquare',
+    label: 'Foursquare',
+    description: 'Search, business matching, phone enrichment, and claimed verification.',
+    hint: 'Recommended for phone / website / social enrichment and claimed verification. Uses paid credits.',
+    tags: ['Paid', 'Enrichment', 'Verification'],
+    icon: 'ShieldCheck',
+    defaultChecked: false
+  },
+  {
+    id: 'web_directory',
+    label: 'Web Directories',
+    description: 'Targeted scraping of public business listing websites.',
+    tags: ['Custom Scraping', 'Discovery'],
+    icon: 'Globe',
+    defaultChecked: false
+  },
+  {
+    id: 'gemini',
+    label: 'Gemini AI Search',
+    description: 'Extracting or inferring business details from public web content.',
+    tags: ['AI-assisted', 'Enrichment'],
+    icon: 'Sparkles',
+    defaultChecked: false
+  },
+  {
+    id: 'iraqi_registry',
+    label: 'Iraqi Official Registry',
+    description: 'Official government data for business verification.',
+    tags: ['Official', 'Verification'],
+    icon: 'FileCheck',
+    defaultChecked: false
+  },
+  {
+    id: 'krd_registry',
+    label: 'Kurdistan Region Registry',
+    description: 'Official KRG data for business verification.',
+    tags: ['Official', 'Verification'],
+    icon: 'FileCheck',
+    defaultChecked: false
+  },
+  {
+    id: 'facebook',
+    label: 'Facebook Pages',
+    description: 'Public business pages and contact info.',
+    tags: ['Social', 'Discovery'],
+    icon: 'Facebook',
+    defaultChecked: false
+  },
+  {
+    id: 'instagram',
+    label: 'Instagram Profiles',
+    description: 'Public business profiles and visual content.',
+    tags: ['Social', 'Discovery'],
+    icon: 'Instagram',
+    defaultChecked: false
+  },
+  {
+    id: 'telegram',
+    label: 'Telegram Channels',
+    description: 'Public business channels and local updates.',
+    tags: ['Social', 'Discovery'],
+    icon: 'Send',
+    defaultChecked: false
+  }
 ];
 
 export const CATEGORIES = [
