@@ -1,42 +1,28 @@
-import React, { useMemo, useState } from 'react';
-import {
-  MapPin,
-  Search,
-  Filter,
-  Zap,
-  ShieldCheck,
-  AlertTriangle,
+import React, { useState, useRef, useEffect } from 'react';
+import { 
+  MapPin, 
+  Search, 
+  Filter, 
+  Zap, 
+  ShieldCheck, 
+  AlertTriangle, 
   ChevronDown,
   Layers,
   Settings2,
   Play,
-  Loader2,
-  CheckCircle2,
-  AlertCircle
+  Square
 } from 'lucide-react';
+import { motion } from 'motion/react';
 import { IRAQ_CITIES, CATEGORIES } from '../constants';
-import { DiscoveryResult, DiscoveryRunState } from '../types';
 
-interface JobSetupProps {
-  runState: DiscoveryRunState;
-  onRunStateChange: (state: DiscoveryRunState) => void;
-  onRunSuccess?: () => void;
-}
+export function JobSetup() {
+  const [selectedCity, setSelectedCity] = useState(IRAQ_CITIES[0]);
+  const [selectedDistrict, setSelectedDistrict] = useState(IRAQ_CITIES[0].districts[0]);
+  const [selectedZone, setSelectedZone] = useState(IRAQ_CITIES[0].districts[0].central_zones[0]);
 
-export function JobSetup({ runState, onRunStateChange, onRunSuccess }: JobSetupProps) {
-  const [loading, setLoading] = useState(false);
-  const [result, setResult] = useState<DiscoveryResult | null>(null);
-  const [error, setError] = useState<string | null>(null);
-
-  const selectedCity = useMemo(
-    () => IRAQ_CITIES.find((city) => city.name === runState.city) || IRAQ_CITIES[0],
-    [runState.city]
-  );
-
-  const selectedDistrict = useMemo(
-    () => selectedCity.districts.find((district) => district.name === runState.district) || selectedCity.districts[0],
-    [selectedCity, runState.district]
-  );
+  const [isRunning, setIsRunning] = useState(false);
+  const [progress, setProgress] = useState(0);
+  const intervalRef = useRef<NodeJS.Timeout | null>(null);
 
   const [toggles, setToggles] = useState({
     freeTierOnly: false,
@@ -48,62 +34,96 @@ export function JobSetup({ runState, onRunStateChange, onRunSuccess }: JobSetupP
   });
 
   const handleToggle = (key: keyof typeof toggles) => {
-    setToggles((prev) => ({ ...prev, [key]: !prev[key] }));
+    setToggles(prev => ({ ...prev, [key]: !prev[key] }));
   };
 
-  const handleRun = async () => {
-    if (runState.sources.length === 0) {
-      setError('Please select at least one source before starting collection.');
-      return;
+  const toggleJob = () => {
+    if (isRunning) {
+      stopJob();
+    } else {
+      startJob();
     }
+  };
 
-    setLoading(true);
-    setError(null);
-    setResult(null);
-
-    try {
-      const response = await fetch('/api/run', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          city: runState.city,
-          category: runState.category,
-          sources: runState.sources
-        })
+  const startJob = () => {
+    setIsRunning(true);
+    setProgress(0);
+    intervalRef.current = setInterval(() => {
+      setProgress(prev => {
+        if (prev >= 100) {
+          stopJob();
+          return 100;
+        }
+        return prev + 1;
       });
+    }, 100);
+  };
 
-      const data = await response.json();
-      if (!response.ok) {
-        throw new Error(data.error || data.details || 'Collection failed.');
-      }
-
-      setResult(data);
-      onRunSuccess?.();
-    } catch (err: any) {
-      setError(err.message || 'Unexpected error while starting collection.');
-    } finally {
-      setLoading(false);
+  const stopJob = () => {
+    setIsRunning(false);
+    if (intervalRef.current) {
+      clearInterval(intervalRef.current);
+      intervalRef.current = null;
     }
   };
+
+  useEffect(() => {
+    return () => {
+      if (intervalRef.current) {
+        clearInterval(intervalRef.current);
+      }
+    };
+  }, []);
 
   return (
     <div className="bg-white border border-zinc-200 rounded-2xl shadow-sm h-full flex flex-col overflow-hidden">
       <div className="p-6 border-b border-zinc-100 bg-zinc-50 flex items-center justify-between">
         <div>
           <h2 className="text-lg font-bold tracking-tight text-zinc-900">Job Setup</h2>
-          <p className="text-xs text-zinc-500 font-medium uppercase tracking-wider">Configure collection parameters</p>
+          <p className="text-xs text-zinc-500 font-medium uppercase tracking-wider">
+            {isRunning ? 'Collection in progress...' : 'Configure collection parameters'}
+          </p>
         </div>
-        <button
-          onClick={handleRun}
-          disabled={loading}
-          className="flex items-center gap-2 px-6 py-2.5 bg-orange-600 text-white rounded-xl text-sm font-bold hover:bg-orange-500 transition-all shadow-lg shadow-orange-600/20 active:scale-95 disabled:bg-zinc-400 disabled:cursor-not-allowed"
+        <button 
+          onClick={toggleJob}
+          className={`flex items-center gap-2 px-6 py-2.5 rounded-xl text-sm font-bold transition-all shadow-lg active:scale-95 ${
+            isRunning 
+              ? 'bg-red-50 text-red-600 border border-red-200 hover:bg-red-100 shadow-red-600/5' 
+              : 'bg-orange-600 text-white hover:bg-orange-500 shadow-orange-600/20'
+          }`}
         >
-          {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Play className="w-4 h-4 fill-white" />}
-          {loading ? 'Collecting...' : 'Start Collection'}
+          {isRunning ? (
+            <>
+              <Square className="w-4 h-4 fill-red-600" />
+              Stop Collection
+            </>
+          ) : (
+            <>
+              <Play className="w-4 h-4 fill-white" />
+              Start Collection
+            </>
+          )}
         </button>
       </div>
 
+      {isRunning && (
+        <div className="px-6 py-2 bg-orange-50 border-b border-orange-100">
+          <div className="flex items-center justify-between mb-1">
+            <span className="text-[10px] font-black text-orange-700 uppercase tracking-widest">Progress</span>
+            <span className="text-[10px] font-black text-orange-700">{progress}%</span>
+          </div>
+          <div className="h-1 bg-orange-200 rounded-full overflow-hidden">
+            <motion.div 
+              initial={{ width: 0 }}
+              animate={{ width: `${progress}%` }}
+              className="h-full bg-orange-600"
+            />
+          </div>
+        </div>
+      )}
+
       <div className="flex-1 overflow-y-auto p-6 space-y-8">
+        {/* Geo Targeting */}
         <section className="space-y-4">
           <div className="flex items-center gap-2 text-zinc-400">
             <MapPin className="w-4 h-4" />
@@ -113,21 +133,17 @@ export function JobSetup({ runState, onRunStateChange, onRunSuccess }: JobSetupP
             <div className="space-y-1.5">
               <label className="text-xs font-bold text-zinc-500 ml-1">City</label>
               <div className="relative">
-                <select
+                <select 
                   value={selectedCity.name}
                   onChange={(e) => {
-                    const city = IRAQ_CITIES.find((c) => c.name === e.target.value) || IRAQ_CITIES[0];
-                    const district = city.districts[0];
-                    onRunStateChange({
-                      ...runState,
-                      city: city.name,
-                      district: district.name,
-                      zone: district.central_zones[0]
-                    });
+                    const city = IRAQ_CITIES.find(c => c.name === e.target.value)!;
+                    setSelectedCity(city);
+                    setSelectedDistrict(city.districts[0]);
+                    setSelectedZone(city.districts[0].central_zones[0]);
                   }}
                   className="w-full bg-zinc-50 border border-zinc-200 rounded-xl px-4 py-2.5 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-orange-500/20 appearance-none"
                 >
-                  {IRAQ_CITIES.map((city) => <option key={city.name} value={city.name}>{city.name}</option>)}
+                  {IRAQ_CITIES.map(city => <option key={city.name} value={city.name}>{city.name}</option>)}
                 </select>
                 <ChevronDown className="w-4 h-4 absolute right-3 top-1/2 -translate-y-1/2 text-zinc-400 pointer-events-none" />
               </div>
@@ -135,19 +151,16 @@ export function JobSetup({ runState, onRunStateChange, onRunSuccess }: JobSetupP
             <div className="space-y-1.5">
               <label className="text-xs font-bold text-zinc-500 ml-1">District</label>
               <div className="relative">
-                <select
+                <select 
                   value={selectedDistrict.name}
                   onChange={(e) => {
-                    const district = selectedCity.districts.find((d) => d.name === e.target.value) || selectedCity.districts[0];
-                    onRunStateChange({
-                      ...runState,
-                      district: district.name,
-                      zone: district.central_zones[0]
-                    });
+                    const district = selectedCity.districts.find(d => d.name === e.target.value)!;
+                    setSelectedDistrict(district);
+                    setSelectedZone(district.central_zones[0]);
                   }}
                   className="w-full bg-zinc-50 border border-zinc-200 rounded-xl px-4 py-2.5 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-orange-500/20 appearance-none"
                 >
-                  {selectedCity.districts.map((d) => <option key={d.name} value={d.name}>{d.name}</option>)}
+                  {selectedCity.districts.map(d => <option key={d.name} value={d.name}>{d.name}</option>)}
                 </select>
                 <ChevronDown className="w-4 h-4 absolute right-3 top-1/2 -translate-y-1/2 text-zinc-400 pointer-events-none" />
               </div>
@@ -155,12 +168,12 @@ export function JobSetup({ runState, onRunStateChange, onRunSuccess }: JobSetupP
             <div className="space-y-1.5">
               <label className="text-xs font-bold text-zinc-500 ml-1">Central Zone</label>
               <div className="relative">
-                <select
-                  value={runState.zone}
-                  onChange={(e) => onRunStateChange({ ...runState, zone: e.target.value })}
+                <select 
+                  value={selectedZone}
+                  onChange={(e) => setSelectedZone(e.target.value)}
                   className="w-full bg-zinc-50 border border-zinc-200 rounded-xl px-4 py-2.5 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-orange-500/20 appearance-none"
                 >
-                  {selectedDistrict.central_zones.map((z) => <option key={z} value={z}>{z}</option>)}
+                  {selectedDistrict.central_zones.map(z => <option key={z} value={z}>{z}</option>)}
                 </select>
                 <ChevronDown className="w-4 h-4 absolute right-3 top-1/2 -translate-y-1/2 text-zinc-400 pointer-events-none" />
               </div>
@@ -168,6 +181,7 @@ export function JobSetup({ runState, onRunStateChange, onRunSuccess }: JobSetupP
           </div>
         </section>
 
+        {/* Category & Keywords */}
         <section className="space-y-4">
           <div className="flex items-center gap-2 text-zinc-400">
             <Filter className="w-4 h-4" />
@@ -177,12 +191,8 @@ export function JobSetup({ runState, onRunStateChange, onRunSuccess }: JobSetupP
             <div className="space-y-1.5">
               <label className="text-xs font-bold text-zinc-500 ml-1">Main Category</label>
               <div className="relative">
-                <select
-                  value={runState.category}
-                  onChange={(e) => onRunStateChange({ ...runState, category: e.target.value })}
-                  className="w-full bg-zinc-50 border border-zinc-200 rounded-xl px-4 py-2.5 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-orange-500/20 appearance-none"
-                >
-                  {CATEGORIES.map((cat) => <option key={cat} value={cat}>{cat}</option>)}
+                <select className="w-full bg-zinc-50 border border-zinc-200 rounded-xl px-4 py-2.5 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-orange-500/20 appearance-none">
+                  {CATEGORIES.map(cat => <option key={cat} value={cat}>{cat}</option>)}
                 </select>
                 <ChevronDown className="w-4 h-4 absolute right-3 top-1/2 -translate-y-1/2 text-zinc-400 pointer-events-none" />
               </div>
@@ -191,9 +201,9 @@ export function JobSetup({ runState, onRunStateChange, onRunSuccess }: JobSetupP
               <label className="text-xs font-bold text-zinc-500 ml-1">Keyword Search</label>
               <div className="relative">
                 <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400" />
-                <input
-                  type="text"
-                  placeholder="e.g. 'Coffee Shop', 'Pharmacy'..."
+                <input 
+                  type="text" 
+                  placeholder="e.g. 'Coffee Shop', 'Pharmacy'..." 
                   className="w-full bg-zinc-50 border border-zinc-200 rounded-xl pl-9 pr-4 py-2.5 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-orange-500/20"
                 />
               </div>
@@ -201,6 +211,7 @@ export function JobSetup({ runState, onRunStateChange, onRunSuccess }: JobSetupP
           </div>
         </section>
 
+        {/* Collection Parameters */}
         <section className="space-y-4">
           <div className="flex items-center gap-2 text-zinc-400">
             <Settings2 className="w-4 h-4" />
@@ -224,6 +235,7 @@ export function JobSetup({ runState, onRunStateChange, onRunSuccess }: JobSetupP
           </div>
         </section>
 
+        {/* Smart Toggles */}
         <section className="space-y-4">
           <div className="flex items-center gap-2 text-zinc-400">
             <Zap className="w-4 h-4" />
@@ -236,14 +248,14 @@ export function JobSetup({ runState, onRunStateChange, onRunSuccess }: JobSetupP
               { id: 'enrichmentMode', label: 'Enrichment Mode', icon: ShieldCheck },
               { id: 'mapPoiOnly', label: 'Map/POI Only', icon: MapPin },
               { id: 'centralCityOnly', label: 'Central City Only', icon: ShieldCheck },
-              { id: 'rejectSuburbs', label: 'Reject Suburbs Automatically', icon: AlertTriangle }
+              { id: 'rejectSuburbs', label: 'Reject Suburbs Automatically', icon: AlertTriangle },
             ].map((toggle) => (
-              <button
+              <button 
                 key={toggle.id}
-                onClick={() => handleToggle(toggle.id as keyof typeof toggles)}
+                onClick={() => handleToggle(toggle.id as any)}
                 className={`flex items-center justify-between p-3 rounded-xl border transition-all ${
-                  toggles[toggle.id as keyof typeof toggles]
-                    ? 'bg-orange-50 border-orange-200 text-orange-900'
+                  toggles[toggle.id as keyof typeof toggles] 
+                    ? 'bg-orange-50 border-orange-200 text-orange-900' 
                     : 'bg-white border-zinc-100 text-zinc-500 hover:border-zinc-200'
                 }`}
               >
@@ -262,34 +274,6 @@ export function JobSetup({ runState, onRunStateChange, onRunSuccess }: JobSetupP
             ))}
           </div>
         </section>
-
-        {error && (
-          <div className="p-4 bg-red-50 border border-red-100 rounded-xl flex items-start gap-3 text-red-900">
-            <AlertCircle className="w-5 h-5 shrink-0 mt-0.5" />
-            <p className="text-sm">{error}</p>
-          </div>
-        )}
-
-        {result && (
-          <div className="p-4 bg-emerald-50 border border-emerald-100 rounded-xl text-emerald-900">
-            <div className="flex items-center gap-2 font-bold text-sm mb-2">
-              <CheckCircle2 className="w-4 h-4" />
-              Collection completed
-            </div>
-            <p className="text-xs mb-2">{result.summary}</p>
-            <div className="text-xs font-semibold space-y-1">
-              <p>Inserted: {result.insertedCount}</p>
-              <p>Skipped: {result.skippedCount}</p>
-            </div>
-            {result.errors.length > 0 && (
-              <ul className="mt-2 text-xs list-disc pl-4 space-y-1 text-red-700">
-                {result.errors.map((item, index) => (
-                  <li key={index}>{item}</li>
-                ))}
-              </ul>
-            )}
-          </div>
-        )}
       </div>
     </div>
   );
