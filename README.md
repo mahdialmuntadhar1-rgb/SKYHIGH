@@ -1,9 +1,8 @@
-# Supabase Schema for Iraq Business Discovery
+# SKYHIGH — Supabase-backed Iraq Business Discovery
 
 Run this SQL in your Supabase SQL Editor to set up the database.
 
 ```sql
--- Create the businesses table
 CREATE TABLE businesses (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   name TEXT NOT NULL,
@@ -22,21 +21,39 @@ CREATE TABLE businesses (
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
--- Add indexes for common filters
 CREATE INDEX idx_businesses_city ON businesses(city);
 CREATE INDEX idx_businesses_category ON businesses(category);
 CREATE INDEX idx_businesses_source ON businesses(source);
-
--- Add a unique constraint for basic deduplication
--- Note: This is a strict constraint. In production, you might prefer 
--- application-level logic or a more flexible index.
--- ALTER TABLE businesses ADD CONSTRAINT unique_business UNIQUE (name, phone, city);
 ```
 
-## Setup Instructions
+## Environment Variables
 
-1. Create a new Supabase project.
-2. Run the SQL above in the SQL Editor.
-3. Copy your `SUPABASE_URL`, `SUPABASE_ANON_KEY`, and `SUPABASE_SERVICE_ROLE_KEY` to your secrets/env.
-4. Add `GEMINI_API_KEY` to your secrets.
-5. Run `npm run dev` to start the app.
+Create a `.env` file (or set in your runtime environment):
+
+- `SUPABASE_URL` (required)
+- `SUPABASE_SERVICE_ROLE_KEY` (required, server-only)
+- `GEMINI_API_KEY` (optional, only needed when Gemini source is enabled)
+
+> The frontend does **not** use Supabase service-role credentials. All reads/writes go through Express API endpoints.
+
+## Setup
+
+1. Create a Supabase project and run the SQL above.
+2. Set environment variables.
+3. Install dependencies:
+   - `npm install`
+4. Start the app:
+   - `npm run dev`
+
+## Live API Endpoints
+
+- `POST /api/run` — trigger a discovery run (`{ city, category, sources: ['osm' | 'gemini'] }`)
+- `GET /api/businesses` — paginated business listing with filters (`city`, `category`, `source`, `search`)
+- `GET /api/dashboard-summary` — aggregate stats for admin dashboard
+- `GET /api/health` — health check
+
+## Source Support (Current)
+
+- ✅ `osm` (real collector via OSM/Nominatim)
+- ✅ `gemini` (LLM-assisted discovery; lower trust than structured sources)
+- 🚫 Other source labels shown in UI are explicitly disabled until integrated.
