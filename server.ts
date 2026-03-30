@@ -1,77 +1,84 @@
-import express from "express";
-import path from "path";
-import { createServer as createViteServer } from "vite";
-import { runDiscovery } from "./src/server/discovery";
-import { supabase } from "./src/server/supabase";
+import express from 'express';
+import path from 'path';
+import { createServer as createViteServer } from 'vite';
+import { runDiscovery } from './src/server/discovery';
+import { providerCatalog } from './src/server/providers/catalog';
+import { getLatestRecords, setLatestRecords } from './src/server/discoveryStore';
+import { exportRecords } from './src/server/services/importExport';
 
 async function startServer() {
   const app = express();
   const PORT = 3000;
 
-  app.use(express.json());
+  app.use(express.json({ limit: '10mb' }));
 
-  // API routes
-  app.get("/api/health", (req, res) => {
-    res.json({ status: "ok", timestamp: new Date().toISOString() });
+  app.get('/api/health', (_req, res) => {
+    res.json({ status: 'ok', timestamp: new Date().toISOString() });
   });
 
-  app.post("/api/run", async (req, res) => {
+  app.get('/api/providers', (_req, res) => {
+    res.json({ data: providerCatalog });
+  });
+
+  app.post('/api/run', async (req, res) => {
     try {
       const result = await runDiscovery(req.body);
+      setLatestRecords(result.records);
       res.json(result);
     } catch (error: any) {
       res.status(500).json({ error: error.message });
     }
   });
 
-  app.get("/api/businesses", async (req, res) => {
+  app.get('/api/businesses', (req, res) => {
     try {
-      const { city, category, source, page = 1, pageSize = 20 } = req.query;
-      
-      let query = supabase
-        .from('businesses')
-        .select('*', { count: 'exact' });
+      const { city, category, status, page = '1', pageSize = '20' } = req.query;
+      let rows = getLatestRecords();
 
-      if (city) query = query.eq('city', city);
-      if (category) query = query.eq('category', category);
-      if (source) query = query.eq('source', source);
+      if (city) rows = rows.filter((row) => row.city === city);
+      if (category) rows = rows.filter((row) => row.category === category);
+      if (status) rows = rows.filter((row) => row.status === status);
 
-      const from = (Number(page) - 1) * Number(pageSize);
-      const to = from + Number(pageSize) - 1;
-
-      const { data, count, error } = await query
-        .order('created_at', { ascending: false })
-        .range(from, to);
-
-      if (error) throw error;
+      const pageNum = Number(page);
+      const sizeNum = Number(pageSize);
+      const from = (pageNum - 1) * sizeNum;
+      const to = from + sizeNum;
 
       res.json({
-        data,
-        total: count,
-        page: Number(page),
-        pageSize: Number(pageSize)
+        data: rows.slice(from, to),
+        total: rows.length,
+        page: pageNum,
+        pageSize: sizeNum
       });
     } catch (error: any) {
       res.status(500).json({ error: error.message });
     }
   });
 
-  // Vite middleware for development
-  if (process.env.NODE_ENV !== "production") {
+  app.get('/api/export', (req, res) => {
+    const format = (req.query.format as 'csv' | 'json') || 'json';
+    const body = exportRecords(getLatestRecords(), format);
+    if (format === 'csv') {
+      res.setHeader('Content-Type', 'text/csv');
+    }
+    res.send(body);
+  });
+
+  if (process.env.NODE_ENV !== 'production') {
     const vite = await createViteServer({
       server: { middlewareMode: true },
-      appType: "spa",
+      appType: 'spa'
     });
     app.use(vite.middlewares);
   } else {
     const distPath = path.join(process.cwd(), 'dist');
     app.use(express.static(distPath));
-    app.get('*', (req, res) => {
+    app.get('*', (_req, res) => {
       res.sendFile(path.join(distPath, 'index.html'));
     });
   }
 
-  app.listen(PORT, "0.0.0.0", () => {
+  app.listen(PORT, '0.0.0.0', () => {
     console.log(`Server running on http://localhost:${PORT}`);
   });
 }
