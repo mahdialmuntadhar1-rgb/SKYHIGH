@@ -1,42 +1,69 @@
-# Supabase Schema for Iraq Business Discovery
+# SKYHIGH — Supabase-backed Business Discovery
 
-Run this SQL in your Supabase SQL Editor to set up the database.
+This project runs business collection through an Express backend and stores records in Supabase.
+
+## 1) Database setup (Supabase)
+
+Run the migration in `supabase/migrations/20260330_businesses_schema.sql`.
+
+If you prefer manual SQL, use this core table:
 
 ```sql
--- Create the businesses table
-CREATE TABLE businesses (
+CREATE EXTENSION IF NOT EXISTS pgcrypto;
+
+CREATE TABLE IF NOT EXISTS businesses (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   name TEXT NOT NULL,
   local_name TEXT,
   category TEXT NOT NULL,
   city TEXT NOT NULL,
   governorate TEXT,
+  district TEXT,
+  city_center_zone TEXT,
   address TEXT,
   phone TEXT,
   website TEXT,
   facebook_url TEXT,
   instagram_url TEXT,
+  latitude DOUBLE PRECISION,
+  longitude DOUBLE PRECISION,
   source TEXT NOT NULL,
   source_url TEXT,
-  confidence_score FLOAT DEFAULT 0.0,
+  confidence_score DOUBLE PRECISION DEFAULT 0.0,
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
-
--- Add indexes for common filters
-CREATE INDEX idx_businesses_city ON businesses(city);
-CREATE INDEX idx_businesses_category ON businesses(category);
-CREATE INDEX idx_businesses_source ON businesses(source);
-
--- Add a unique constraint for basic deduplication
--- Note: This is a strict constraint. In production, you might prefer 
--- application-level logic or a more flexible index.
--- ALTER TABLE businesses ADD CONSTRAINT unique_business UNIQUE (name, phone, city);
 ```
 
-## Setup Instructions
+## 2) Environment variables
 
-1. Create a new Supabase project.
-2. Run the SQL above in the SQL Editor.
-3. Copy your `SUPABASE_URL`, `SUPABASE_ANON_KEY`, and `SUPABASE_SERVICE_ROLE_KEY` to your secrets/env.
-4. Add `GEMINI_API_KEY` to your secrets.
-5. Run `npm run dev` to start the app.
+Set these in your server runtime environment:
+
+- `SUPABASE_URL` (required)
+- `SUPABASE_SERVICE_ROLE_KEY` (required, server-only)
+- `GEMINI_API_KEY` (optional, only needed if Gemini source is enabled)
+
+> Do **not** expose `SUPABASE_SERVICE_ROLE_KEY` to the browser.
+
+## 3) Install and run
+
+```bash
+npm install
+npm run dev
+```
+
+Server runs on `http://localhost:3000` and serves both API + frontend in dev mode.
+
+## 4) Real collection flow
+
+- UI `Start Collection` sends `POST /api/run`
+- Backend validates payload and runs selected collectors (`osm`, `gemini`)
+- New records are deduplicated and inserted into Supabase
+- Admin Dashboard and Review Queue load live records from backend APIs
+
+## 5) API endpoints
+
+- `GET /api/health`
+- `GET /api/sources`
+- `POST /api/run`
+- `GET /api/businesses`
+- `GET /api/dashboard`
