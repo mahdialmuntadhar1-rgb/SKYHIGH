@@ -64,12 +64,13 @@ app.post("/api/run", async (req, res) => {
 
 app.get("/api/businesses", async (req, res) => {
   try {
-    const { city, category, source, page = "1", pageSize = "20" } = req.query as Record<string, string>;
+    const { city, category, source, page = "1", pageSize = "20", status } = req.query as Record<string, string>;
 
     let query = supabase.from("businesses").select("*", { count: "exact" });
     if (city)     query = query.eq("city", city);
     if (category) query = query.eq("category", category);
     if (source)   query = query.eq("source", source);
+    if (status)   query = query.eq("status", status);
 
     const from = (Number(page) - 1) * Number(pageSize);
     const to   = from + Number(pageSize) - 1;
@@ -209,4 +210,7 @@ app.get("/api/stats", async (req, res) => {
   }
 });
 
-export default app;
+// Vercel serverless handler
+export default (req: any, res: any) => {
+  return app(req, res);
+};
