@@ -3,25 +3,45 @@ import { DiscoveryAdapter } from "./base";
 
 export class WebDirectoryAdapter implements DiscoveryAdapter {
   id = 'web_directory' as const;
-  name = 'Web Directory (Mock)';
+  name = 'Web Directory (DuckDuckGo)';
 
   async discover(city: string, category: string): Promise<Partial<Business>[]> {
-    // In a real app, this would use a library like puppeteer or cheerio
-    // For v1, we simulate discovery of a few items to show the structure works
-    console.log(`Mocking web directory discovery for ${category} in ${city}`);
-    
-    return [
-      {
-        name: `${category} Center ${city}`,
-        local_name: `مركز ${category} في ${city}`,
+    const q = encodeURIComponent(`${category} in ${city} Iraq`);
+    const resp = await fetch(
+      `https://api.duckduckgo.com/?q=${q}&format=json&no_redirect=1&no_html=1`,
+      { headers: { 'User-Agent': 'skyhigh-discovery/1.0' } }
+    );
+    if (!resp.ok) throw new Error(`DuckDuckGo request failed: ${resp.status}`);
+
+    const body = await resp.json() as {
+      RelatedTopics?: Array<{
+        Text?: string;
+        FirstURL?: string;
+        Topics?: Array<{ Text?: string; FirstURL?: string }>;
+      }>;
+    };
+
+    const categoryLower = category.toLowerCase();
+    const cityLower = city.toLowerCase();
+
+    const flat = (body.RelatedTopics ?? []).flatMap(r => r.Topics ? r.Topics : [r]);
+
+    return flat
+      .filter(r => {
+        if (!r.Text) return false;
+        const t = r.Text.toLowerCase();
+        if (t === categoryLower || t === cityLower) return false;
+        if (r.FirstURL?.includes('duckduckgo.com/c/')) return false;
+        return t.includes(cityLower) || t.includes(categoryLower);
+      })
+      .slice(0, 10)
+      .map(r => ({
+        name: r.Text!.split(' - ')[0].trim(),
         category,
         city,
-        address: `Main St, ${city}`,
-        phone: "+964 000 000 000",
-        source: 'web_directory',
-        source_url: 'https://example-iraq-directory.com',
-        confidence_score: 0.6
-      }
-    ];
+        source: 'web_directory' as const,
+        source_url: r.FirstURL,
+        confidence_score: 0.40
+      }));
   }
 }

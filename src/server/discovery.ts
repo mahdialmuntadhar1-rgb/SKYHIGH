@@ -121,18 +121,12 @@ export async function runDiscovery(req: DiscoveryRequest): Promise<DiscoveryResu
 
       if (error) {
         errors.push(`Insert error for ${biz.name}: ${error.message}`);
-        // Fallback: still count as inserted for demo purposes if it's a DB error
-        totalInserted++;
-        sourceStats[sourceId].inserted++;
       } else {
         totalInserted++;
         sourceStats[sourceId].inserted++;
       }
     } catch (e: any) {
       errors.push(`Database connection failed: ${e.message}`);
-      // Fallback for demo
-      totalInserted++;
-      sourceStats[sourceId].inserted++;
     }
   }
 
