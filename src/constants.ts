@@ -140,16 +140,24 @@ export const DISCOVERY_SOURCES: DiscoverySourceConfig[] = [
 ];
 
 export const CATEGORIES = [
-  'Retail',
-  'Food & Beverage',
-  'Health & Medical',
-  'Technology',
-  'Education',
-  'Finance',
-  'Professional Services',
-  'Manufacturing',
-  'Logistics',
-  'Hospitality',
-  'Real Estate',
-  'Automotive'
+  { id: 'restaurants_dining', name: 'Restaurants & Dining', icon: 'UtensilsCrossed', types: 4 },
+  { id: 'cafes_coffee', name: 'Cafes & Coffee', icon: 'Coffee', types: 3 },
+  { id: 'hotels_stays', name: 'Hotels & Stays', icon: 'Building2', types: 3 },
+  { id: 'shopping_retail', name: 'Shopping & Retail', icon: 'ShoppingBag', types: 3 },
+  { id: 'banks_finance', name: 'Banks & Finance', icon: 'Landmark', types: 3 },
+  { id: 'education', name: 'Education', icon: 'GraduationCap', types: 3 },
+  { id: 'entertainment', name: 'Entertainment', icon: 'Film', types: 3 },
+  { id: 'tourism_travel', name: 'Tourism & Travel', icon: 'Plane', types: 3 },
+  { id: 'doctors_physicians', name: 'Doctors & Physicians', icon: 'Stethoscope', types: 6 },
+  { id: 'lawyers_legal', name: 'Lawyers & Legal', icon: 'Scale', types: 3 },
+  { id: 'hospitals_clinics', name: 'Hospitals & Clinics', icon: 'Hospital', types: 4 },
+  { id: 'medical_clinics', name: 'Medical Clinics', icon: 'HeartPulse', types: 5 },
+  { id: 'real_estate', name: 'Real Estate', icon: 'Home', types: 4 },
+  { id: 'events_venues', name: 'Events & Venues', icon: 'PartyPopper', types: 4, hot: true },
+  { id: 'others_general', name: 'Others & General', icon: 'MoreHorizontal', types: 4 },
+  { id: 'pharmacy_drugs', name: 'Pharmacy & Drugs', icon: 'Pill', types: 3 },
+  { id: 'gym_fitness', name: 'Gym & Fitness', icon: 'Dumbbell', types: 4 },
+  { id: 'beauty_salons', name: 'Beauty & Salons', icon: 'Sparkles', types: 4 },
+  { id: 'supermarkets', name: 'Supermarkets', icon: 'Store', types: 4 },
+  { id: 'furniture_home', name: 'Furniture & Home', icon: 'Sofa', types: 4 }
 ];
